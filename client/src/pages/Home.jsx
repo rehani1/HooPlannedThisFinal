@@ -29,7 +29,7 @@ export default function Home() {
         <Link to="/committees" style={tileStyle}>Committees</Link>
         <Link to="/profile" style={tileStyle}>Profile</Link>
         <Link to="/classcouncil" style={tileStyle}>Class Council</Link>
-        <Link to="/advisors" style={tileStyle}>Advisors</Link>
+        <Link to="/advisor" style={tileStyle}>Advisors</Link>
         <Link to="/budget" style={tileStyle}>Budget</Link>
         <Link to="/volunteersignup" style={tileStyle}>Volunteer Sign-Up</Link>
         <Link to="/events/manage" style={tileStyle}>Manage Events</Link>

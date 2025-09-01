@@ -5,7 +5,7 @@ import Login from "./pages/login.jsx";
 import Home from "./pages/Home.jsx";
 import Register from "./pages/Register.jsx";
 import Profile from "./pages/Profile.jsx";
-
+import Advisor from "./pages/Advisor.jsx";
 
 export default function App() {
   return (
@@ -15,7 +15,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<Home />} /> 
         <Route path="/Profile" element={<Profile />} /> 
-        
+        <Route path="/Advisor" element={<Advisor />} />
         <Route path="/dashboard" element={<h1>Dashboard (protected)</h1>} />
         <Route path="/register" element={<Register />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
