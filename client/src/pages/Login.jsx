@@ -1,6 +1,7 @@
-
+// src/pages/Login.jsx
 import React from "react";
-
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
 const COLORS = {
   orange: "#ff8937",
@@ -18,7 +19,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontFamily: '"Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+    fontFamily:
+      '"Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
     padding: "40px 24px",
     background: COLORS.white,
     boxSizing: "border-box",
@@ -65,6 +67,8 @@ const styles = {
     border: `1px solid ${COLORS.gray200}`,
     boxShadow:
       "0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)",
+    width: "100%",
+    maxWidth: 420,
   },
   cardTitle: {
     margin: "0 0 28px",
@@ -108,7 +112,7 @@ const styles = {
     borderRadius: 6,
     border: `1px solid ${COLORS.gray200}`,
     background: COLORS.white,
-    pointerEvents: "none", // purely decorative
+    cursor: "pointer",
   },
 
   primaryBtn: {
@@ -139,6 +143,9 @@ const styles = {
     fontWeight: 500,
     border: `2px solid ${COLORS.navy}`,
   },
+
+  error: { color: "crimson", marginBottom: 12, minHeight: 20 },
+  hint: { color: COLORS.navy90, fontSize: 14, marginTop: 8, textAlign: "center" },
 };
 
 // inline SVGs to match the look
@@ -169,7 +176,29 @@ const EyeSVG = (props) => (
   </svg>
 );
 
-export default function App() {
+export default function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [showPw, setShowPw] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) {
+      setError(error.message || "Login failed");
+      return;
+    }
+    navigate("/home", { replace: true });
+  };
+
+  const gotoRequest = () => navigate("/request-account");
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
@@ -186,48 +215,66 @@ export default function App() {
           </p>
         </div>
 
-        {/* Right: Login Card (purely presentational) */}
+        {/* Right: Login Card */}
         <div style={styles.right}>
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Login</h2>
 
-            <label htmlFor="username" style={styles.label}>
-              Username
-            </label>
-            <div style={styles.inputWrapper}>
-              <input
-                id="username"
-                placeholder="Enter your username"
-                style={styles.input}
-                disabled={false}
-                readOnly={false}
-              />
-            </div>
-
-            <label htmlFor="password" style={styles.label}>
-              Password
-            </label>
-            <div style={styles.inputWrapper}>
-              <input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                style={styles.input}
-                disabled={false}
-                readOnly={false}
-              />
-              <div style={styles.rightIconBtn} aria-hidden>
-                <EyeSVG />
+            <form onSubmit={handleSubmit}>
+              <label htmlFor="email" style={styles.label}>
+                Email
+              </label>
+              <div style={styles.inputWrapper}>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="you@school.edu"
+                  style={styles.input}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
               </div>
-            </div>
 
-            <button type="button" style={styles.primaryBtn}>
-              Log In
-            </button>
+              <label htmlFor="password" style={styles.label}>
+                Password
+              </label>
+              <div style={styles.inputWrapper}>
+                <input
+                  id="password"
+                  type={showPw ? "text" : "password"}
+                  placeholder="Enter your password"
+                  style={styles.input}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  style={styles.rightIconBtn}
+                  onClick={() => setShowPw((s) => !s)}
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                >
+                  <EyeSVG />
+                </button>
+              </div>
+
+              <div style={styles.error}>{error}</div>
+
+              <button type="submit" style={styles.primaryBtn} disabled={loading}>
+                {loading ? "Logging in…" : "Log In"}
+              </button>
+            </form>
+
+            <div style={styles.hint}>
+              Don’t have an account? Use “Request a New Account” below.
+            </div>
 
             <div style={styles.or}>Or</div>
 
-            <button type="button" style={styles.secondaryBtn}>
+            <button type="button" style={styles.secondaryBtn} onClick={gotoRequest}>
               Request a New Account
             </button>
           </div>
