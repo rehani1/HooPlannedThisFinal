@@ -1,8 +1,8 @@
-// src/pages/Login.jsx
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
+// --- same palette + styles as Login.jsx ---
 const COLORS = {
   orange: "#ff8937",
   navy: "#003e83",
@@ -72,6 +72,7 @@ const styles = {
   linkRow: { textAlign: "center", marginTop: 12, color: COLORS.navy90, fontSize: 14 },
 
   error: { color: "crimson", marginBottom: 12, minHeight: 20 },
+  success: { color: "green", marginBottom: 12, minHeight: 20 },
 };
 
 const CalendarSVG = (props) => (
@@ -96,51 +97,65 @@ const EyeSVG = (props) => (
   </svg>
 );
 
-export default function Login() {
+export default function Register() {
   const navigate = useNavigate();
+
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [confirm, setConfirm] = React.useState("");
   const [showPw, setShowPw] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [success, setSuccess] = React.useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    setError(""); setSuccess("");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    setLoading(false);
-    if (error) {
-      setError(error.message || "Login failed");
+    if (password !== confirm) {
+      setError("Passwords do not match.");
       return;
     }
+
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: window.location.origin + "/login" },
+    });
+    setLoading(false);
+
+    if (error) {
+      setError(error.message || "Registration failed");
+      return;
+    }
+
+    // If email confirmations are enabled, Supabase creates the user but no session:
+    if (data?.user && !data?.session) {
+      setSuccess("Check your email to confirm your account, then log in.");
+      return;
+    }
+
+    // If confirmations are disabled, you may be signed in immediately:
     navigate("/home", { replace: true });
   };
-
-  const gotoRequest = () => navigate("/request-account");
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        {/* Left: Brand */}
         <div style={styles.left}>
           <div style={styles.brandRow}>
             <CalendarSVG style={styles.calendarIcon} />
             <h1 style={styles.brandTitle}>HooPlannedThis</h1>
           </div>
           <p style={styles.tagline}>
-            Welcome to HooPlannedThis.
-            <br />
-            Log in to coordinate your class events effortlessly.
+            Create your account to coordinate class events effortlessly.
           </p>
         </div>
 
-        {/* Right: Login Card */}
         <div style={styles.right}>
           <div style={styles.card}>
-            <h2 style={styles.cardTitle}>Login</h2>
+            <h2 style={styles.cardTitle}>Create account</h2>
 
             <form onSubmit={handleSubmit}>
               <label htmlFor="email" style={styles.label}>Email</label>
@@ -162,12 +177,12 @@ export default function Login() {
                 <input
                   id="password"
                   type={showPw ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder="Create a password"
                   style={styles.input}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -179,23 +194,31 @@ export default function Login() {
                 </button>
               </div>
 
+              <label htmlFor="confirm" style={styles.label}>Confirm password</label>
+              <div style={styles.inputWrapper}>
+                <input
+                  id="confirm"
+                  type={showPw ? "text" : "password"}
+                  placeholder="Re-enter your password"
+                  style={styles.input}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
+
               <div style={styles.error}>{error}</div>
+              <div style={styles.success}>{success}</div>
 
               <button type="submit" style={styles.primaryBtn} disabled={loading}>
-                {loading ? "Logging in…" : "Log In"}
+                {loading ? "Creating…" : "Create account"}
               </button>
             </form>
 
             <div style={styles.linkRow}>
-              New here? <Link to="/register">Create an account</Link>
+              Already have an account? <Link to="/login">Log in</Link>
             </div>
-
-            <div style={styles.linkRow}>
-              <button type="button" style={{ ...styles.primaryBtn, background: "transparent", color: COLORS.navy, border: `2px solid ${COLORS.navy}` }} onClick={gotoRequest}>
-                Request a New Account
-              </button>
-            </div>
-
           </div>
         </div>
       </div>
