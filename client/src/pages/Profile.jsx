@@ -34,7 +34,7 @@ export default function Profile() {
         </div>
   
         <div style={{ marginTop: 32 }}>
-          <Link to="/" style={backLinkStyle}>← Back to Home</Link>
+          <Link to="/Home" style={backLinkStyle}>← Back to Home</Link>
         </div>
       </div>
     );
