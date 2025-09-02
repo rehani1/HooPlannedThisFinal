@@ -33,6 +33,7 @@ export default function Home() {
         <Link to="/budget" style={tileStyle}>Budget</Link>
         <Link to="/volunteersignup" style={tileStyle}>Volunteer Sign-Up</Link>
         <Link to="/events/manage" style={tileStyle}>Manage Events</Link>
+        <Link to="/login" style={tileStyle}>Logout</Link>
       </div>
     </div>
   );

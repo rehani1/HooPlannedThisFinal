@@ -103,6 +103,7 @@ export default function Register() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
+  const [gradYear, setGradYear] = React.useState(""); // NEW
   const [showPw, setShowPw] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -117,11 +118,22 @@ export default function Register() {
       return;
     }
 
+    const y = Number(gradYear);
+    if (!/^\d{4}$/.test(gradYear) || y < 1900 || y > 2100) {
+      setError("Enter a valid 4-digit graduation year (e.g., 2027).");
+      return;
+    }
+
+
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error: signErr } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin + "/login" },
+      options: {
+        // store grad year in auth metadata too
+        data: { grad_year: y },
+        emailRedirectTo: window.location.origin + "/login",
+      },
     });
     setLoading(false);
 
@@ -205,6 +217,24 @@ export default function Register() {
                   onChange={(e) => setConfirm(e.target.value)}
                   required
                   autoComplete="new-password"
+                />
+              </div>
+
+
+              {/* NEW: Graduation Year */}
+              <label htmlFor="gradYear" style={styles.label}>Graduation year</label>
+              <div style={styles.inputWrapper}>
+                <input
+                  id="gradYear"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="e.g., 2027"
+                  maxLength={4}
+                  pattern="\d{4}"
+                  style={styles.input}
+                  value={gradYear}
+                  onChange={(e) => setGradYear(e.target.value.replace(/\D/g, ""))}
+                  required
                 />
               </div>
 

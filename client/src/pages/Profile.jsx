@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabaseClient";
 
 export default function Profile() {
   const [email, setEmail] = useState(null);
+  const [gradYear, setGradYear] = useState(null);
   const [msg, setMsg] = useState("Loading...");
 
   useEffect(() => {
@@ -14,12 +15,12 @@ export default function Profile() {
       if (authErr) { setMsg(`Auth error: ${authErr.message}`); return; }
       if (!user) { setMsg("No user logged in."); return; }
 
-      console.log("Auth user:", { id: user.id, email: user.email });
+      console.log("Auth user:", { id: user.id, email: user.email, meta_grad_year: user.user_metadata?.grad_year });
 
-      // 1) Try by id (expected path)
+      // 1) Try by id (expected path) — note snake_case 'grad_year'
       const byId = await supabase
         .from('users')
-        .select('id,email')
+        .select('id, email, grad_year')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -27,11 +28,13 @@ export default function Profile() {
         console.error("Users by id error:", byId.error);
         setMsg(`Users select error: ${byId.error.message}`);
         setEmail(user.email); // fallback
+        setGradYear(user.user_metadata?.grad_year ?? null); // fallback from auth metadata, if present
         return;
       }
 
       if (byId.data) {
         setEmail(byId.data.email);
+        setGradYear(byId.data.grad_year ?? user.user_metadata?.grad_year ?? null);
         setMsg("OK");
         return;
       }
@@ -39,7 +42,7 @@ export default function Profile() {
       // 2) Try by email (diagnostic)
       const byEmail = await supabase
         .from('users')
-        .select('id,email')
+        .select('id, email, grad_year')
         .eq('email', user.email)
         .maybeSingle();
 
@@ -47,6 +50,7 @@ export default function Profile() {
         console.error("Users by email error:", byEmail.error);
         setMsg(`No matching row found (and by-email check errored).`);
         setEmail(user.email); // fallback
+        setGradYear(user.user_metadata?.grad_year ?? null);
         return;
       }
 
@@ -58,12 +62,14 @@ export default function Profile() {
         });
         setMsg("ID mismatch: row exists but users.id ≠ auth.user.id");
         setEmail(byEmail.data.email);
+        setGradYear(byEmail.data.grad_year ?? user.user_metadata?.grad_year ?? null);
         return;
       }
 
       // 3) Nothing found at all
       setMsg("No matching row in users. (Consider upserting on login.)");
-      setEmail(user.email); // fallback so UI shows something
+      setEmail(user.email);
+      setGradYear(user.user_metadata?.grad_year ?? null);
     };
 
     run();
@@ -77,6 +83,9 @@ export default function Profile() {
       <div style={{ marginTop: 24, display: 'grid', gap: 16, maxWidth: 500 }}>
         <div style={cardStyle}>
           <strong>Email:</strong> {email ?? "—"}
+        </div>
+        <div style={cardStyle}>
+          <strong>Graduation Year:</strong> {gradYear ?? "—"}
         </div>
         <div style={noteStyle}>
           <small>Status: <span style={{ color: /error|mismatch/i.test(msg) ? 'red' : '#4a5568' }}>{msg}</span></small>
