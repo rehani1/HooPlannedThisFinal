@@ -34,6 +34,7 @@ export default function Home() {
         <Link to="/volunteersignup" style={tileStyle}>Volunteer Sign-Up</Link>
         <Link to="/events/manage" style={tileStyle}>Manage Events</Link>
         <Link to="/login" style={tileStyle}>Logout</Link>
+        <Link to="/admin" style={tileStyle}>Admin</Link>
       </div>
     </div>
   );
