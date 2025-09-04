@@ -4,9 +4,29 @@ import { Link } from 'react-router-dom';
 import { supabase } from "../lib/supabaseClient";
 
 export default function Profile() {
+  const [fullName, setFullName] = useState(null);
   const [email, setEmail] = useState(null);
   const [gradYear, setGradYear] = useState(null);
   const [msg, setMsg] = useState("Loading...");
+
+  // helper to build a display name from various sources
+  const buildName = (row, user) => {
+    const first = row?.first_name?.trim();
+    const last  = row?.last_name?.trim();
+    const fromRow = [first, last].filter(Boolean).join(' ').trim();
+
+    const metaFirst = user?.user_metadata?.first_name?.trim();
+    const metaLast  = user?.user_metadata?.last_name?.trim();
+    const metaFull  = user?.user_metadata?.full_name?.trim();
+    const fromMeta  = metaFull || [metaFirst, metaLast].filter(Boolean).join(' ').trim();
+
+    const fromEmail = (user?.email || row?.email || '')
+      .split('@')[0]
+      .replace(/[._-]/g, ' ')
+      .trim();
+
+    return (fromRow || fromMeta || fromEmail || null);
+  };
 
   useEffect(() => {
     const run = async () => {
@@ -15,12 +35,10 @@ export default function Profile() {
       if (authErr) { setMsg(`Auth error: ${authErr.message}`); return; }
       if (!user) { setMsg("No user logged in."); return; }
 
-      console.log("Auth user:", { id: user.id, email: user.email, meta_grad_year: user.user_metadata?.grad_year });
-
-      // 1) Try by id (expected path) — note snake_case 'grad_year'
+      // 1) Try by id (expected path) — include name fields
       const byId = await supabase
         .from('users')
-        .select('id, email, grad_year')
+        .select('id, email, grad_year, first_name, last_name, full_name')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -28,41 +46,46 @@ export default function Profile() {
         console.error("Users by id error:", byId.error);
         setMsg(`Users select error: ${byId.error.message}`);
         setEmail(user.email); // fallback
-        setGradYear(user.user_metadata?.grad_year ?? null); // fallback from auth metadata, if present
+        setGradYear(user.user_metadata?.grad_year ?? null);
+        setFullName(buildName(null, user));
         return;
       }
 
       if (byId.data) {
-        setEmail(byId.data.email);
+        setEmail(byId.data.email ?? user.email);
         setGradYear(byId.data.grad_year ?? user.user_metadata?.grad_year ?? null);
+
+        // Prefer explicit full_name if you store it; otherwise first+last
+        const fromRowExplicit = byId.data.full_name?.trim();
+        setFullName(fromRowExplicit || buildName(byId.data, user));
+
         setMsg("OK");
         return;
       }
 
-      // 2) Try by email (diagnostic)
+      // 2) Try by email (diagnostic / id mismatch)
       const byEmail = await supabase
         .from('users')
-        .select('id, email, grad_year')
+        .select('id, email, grad_year, first_name, last_name, full_name')
         .eq('email', user.email)
         .maybeSingle();
 
       if (byEmail.error) {
         console.error("Users by email error:", byEmail.error);
         setMsg(`No matching row found (and by-email check errored).`);
-        setEmail(user.email); // fallback
+        setEmail(user.email);
         setGradYear(user.user_metadata?.grad_year ?? null);
+        setFullName(buildName(null, user));
         return;
       }
 
       if (byEmail.data) {
-        console.warn("ID mismatch:", {
-          auth_id: user.id,
-          row_id: byEmail.data.id,
-          email: byEmail.data.email
-        });
+        console.warn("ID mismatch:", { auth_id: user.id, row_id: byEmail.data.id, email: byEmail.data.email });
         setMsg("ID mismatch: row exists but users.id ≠ auth.user.id");
         setEmail(byEmail.data.email);
         setGradYear(byEmail.data.grad_year ?? user.user_metadata?.grad_year ?? null);
+        const fromRowExplicit = byEmail.data.full_name?.trim();
+        setFullName(fromRowExplicit || buildName(byEmail.data, user));
         return;
       }
 
@@ -70,6 +93,7 @@ export default function Profile() {
       setMsg("No matching row in users. (Consider upserting on login.)");
       setEmail(user.email);
       setGradYear(user.user_metadata?.grad_year ?? null);
+      setFullName(buildName(null, user));
     };
 
     run();
@@ -81,6 +105,9 @@ export default function Profile() {
       <p style={{ marginTop: 8, fontSize: 16 }}>Here you can view and update your information.</p>
 
       <div style={{ marginTop: 24, display: 'grid', gap: 16, maxWidth: 500 }}>
+        <div style={cardStyle}>
+          <strong>Name:</strong> {fullName ?? "—"}
+        </div>
         <div style={cardStyle}>
           <strong>Email:</strong> {email ?? "—"}
         </div>

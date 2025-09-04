@@ -8,24 +8,36 @@ export default function Home() {
 
   useEffect(() => {
     const loadName = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) return;
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !user) return;
 
-      // Try users.full_name first
+      // Ask for both, in case your schema uses one or the other
       const { data: row, error: selErr } = await supabase
-        .from('users')
-        .select('full_name, email')
-        .eq('id', user.id)
+        .from("users")
+        .select("first_name, full_name")
+        .eq("id", user.id)
         .maybeSingle();
 
-      const fromUsers = row?.full_name?.trim();
-      const fromMeta  = user.user_metadata?.full_name?.trim();
-      const fromEmail = (user.email || row?.email || '')
-        .split('@')[0]
-        .replace(/[._-]/g, ' ')
+      if (selErr) {
+        console.error("users select error:", selErr);
+      }
+
+      const fromUsers =
+        (row?.first_name?.trim()) ||
+        (row?.full_name ? row.full_name.split(" ")[0].trim() : "");
+
+      const fromMeta =
+        (user.user_metadata?.first_name?.trim()) ||
+        (user.user_metadata?.full_name
+          ? user.user_metadata.full_name.split(" ")[0].trim()
+          : "");
+
+      const fromEmail = (user.email || "")
+        .split("@")[0]
+        .replace(/[._-]/g, " ")
         .trim();
 
-      setDisplayName(fromUsers || fromMeta || fromEmail || 'there');
+      setDisplayName(fromUsers || fromMeta || fromEmail || "there");
     };
 
     loadName();

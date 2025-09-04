@@ -1,8 +1,8 @@
+// src/pages/Register.jsx
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
-// --- same palette + styles as Login.jsx ---
 const COLORS = {
   orange: "#ff8937",
   navy: "#003e83",
@@ -14,65 +14,23 @@ const COLORS = {
 };
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontFamily:
-      '"Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-    padding: "40px 24px",
-    background: COLORS.white,
-    boxSizing: "border-box",
-  },
-  container: {
-    display: "flex",
-    gap: 96,
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    maxWidth: 1280,
-  },
-  left: { flex: "0 0 520px" },
-  right: { flex: "0 0 600px" },
-
-  brandRow: { display: "flex", alignItems: "center", gap: 16 },
-  calendarIcon: { width: 48, height: 48, flexShrink: 0 },
-  brandTitle: { margin: 0, fontWeight: 800, fontSize: 48, color: COLORS.navy },
-  tagline: { marginTop: 18, color: COLORS.navy, fontSize: 18, lineHeight: 1.6 },
-
-  card: {
-    background: COLORS.white,
-    borderRadius: 12,
-    padding: 40,
-    border: `1px solid ${COLORS.gray200}`,
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)",
-    width: "100%",
-    maxWidth: 420,
-  },
-  cardTitle: { margin: "0 0 28px", textAlign: "center", color: COLORS.navy, fontWeight: 700, fontSize: 28 },
-
-  label: { display: "block", marginBottom: 12, color: COLORS.navy, fontWeight: 600, fontSize: 18 },
-  input: {
-    width: "100%", height: 48, borderRadius: 8,
-    border: `1px solid ${COLORS.gray300}`, background: COLORS.white,
-    padding: "0 16px", fontSize: 16, outline: "none",
-  },
-  inputWrapper: { position: "relative", marginBottom: 20 },
-  rightIconBtn: {
-    position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-    width: 28, height: 28, display: "grid", placeItems: "center",
-    borderRadius: 6, border: `1px solid ${COLORS.gray200}`, background: COLORS.white, cursor: "pointer",
-  },
-
-  primaryBtn: {
-    width: "100%", height: 48, border: "none", borderRadius: 9999,
-    background: COLORS.navy, color: COLORS.white, fontSize: 16, fontWeight: 500,
-  },
-  linkRow: { textAlign: "center", marginTop: 12, color: COLORS.navy90, fontSize: 14 },
-
-  error: { color: "crimson", marginBottom: 12, minHeight: 20 },
-  success: { color: "green", marginBottom: 12, minHeight: 20 },
+  page: { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:'"Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif', padding:"40px 24px", background: COLORS.white, boxSizing:"border-box" },
+  container: { display:"flex", gap:96, alignItems:"center", justifyContent:"center", width:"100%", maxWidth:1280 },
+  left: { flex:"0 0 520px" }, right: { flex:"0 0 600px" },
+  brandRow: { display:"flex", alignItems:"center", gap:16 },
+  calendarIcon: { width:48, height:48, flexShrink:0 },
+  brandTitle: { margin:0, fontWeight:800, fontSize:48, color:COLORS.navy },
+  tagline: { marginTop:18, color:COLORS.navy, fontSize:18, lineHeight:1.6 },
+  card: { background:COLORS.white, borderRadius:12, padding:40, border:`1px solid ${COLORS.gray200}`, boxShadow:"0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)", width:"100%", maxWidth:420 },
+  cardTitle: { margin:"0 0 28px", textAlign:"center", color:COLORS.navy, fontWeight:700, fontSize:28 },
+  label: { display:"block", marginBottom:12, color:COLORS.navy, fontWeight:600, fontSize:18 },
+  input: { width:"100%", height:48, borderRadius:8, border:`1px solid ${COLORS.gray300}`, background:COLORS.white, padding:"0 16px", fontSize:16, outline:"none" },
+  inputWrapper: { position:"relative", marginBottom:20 },
+  rightIconBtn: { position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", width:28, height:28, display:"grid", placeItems:"center", borderRadius:6, border:`1px solid ${COLORS.gray200}`, background:COLORS.white, cursor:"pointer" },
+  primaryBtn: { width:"100%", height:48, border:"none", borderRadius:9999, background:COLORS.navy, color:COLORS.white, fontSize:16, fontWeight:500 },
+  linkRow: { textAlign:"center", marginTop:12, color:COLORS.navy90, fontSize:14 },
+  error: { color:"crimson", marginBottom:12, minHeight:20 },
+  success: { color:"green", marginBottom:12, minHeight:20 },
 };
 
 const CalendarSVG = (props) => (
@@ -100,10 +58,12 @@ const EyeSVG = (props) => (
 export default function Register() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = React.useState("");
+  const [email, setEmail] = React.useState("");           // ✅ missing before
+  const [firstName, setFirstName] = React.useState("");   // ✅ fixed name
+  const [lastName, setLastName] = React.useState("");     // optional
   const [password, setPassword] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
-  const [gradYear, setGradYear] = React.useState(""); // NEW
+  const [gradYear, setGradYear] = React.useState("");
   const [showPw, setShowPw] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -124,32 +84,43 @@ export default function Register() {
       return;
     }
 
-
     setLoading(true);
     const { data, error: signErr } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        // store grad year in auth metadata too
-        data: { grad_year: y },
+        // store extras in auth user_metadata
+        data: { grad_year: y, first_name: firstName, last_name: lastName || null },
         emailRedirectTo: window.location.origin + "/login",
       },
     });
     setLoading(false);
 
-    if (error) {
-      setError(error.message || "Registration failed");
+    if (signErr) {                          // ✅ was checking wrong var
+      setError(signErr.message || "Registration failed");
       return;
     }
 
-    // If email confirmations are enabled, Supabase creates the user but no session:
+    // If email confirmations are enabled: user exists but no session yet
     if (data?.user && !data?.session) {
       setSuccess("Check your email to confirm your account, then log in.");
       return;
     }
 
-    // If confirmations are disabled, you may be signed in immediately:
-    navigate("/home", { replace: true });
+    // If confirmations are disabled: we may have a session → upsert to your users table
+    const user = data?.user;
+    if (user) {
+      await supabase.from("users").upsert(
+        {
+          id: user.id,
+          email: user.email,
+          full_name: [firstName, lastName].filter(Boolean).join(" "),
+          grad_year: y,
+        },
+        { onConflict: "id" }
+      );
+      navigate("/home", { replace: true });
+    }
   };
 
   return (
@@ -170,6 +141,34 @@ export default function Register() {
             <h2 style={styles.cardTitle}>Create account</h2>
 
             <form onSubmit={handleSubmit}>
+
+            <label htmlFor="firstName" style={styles.label}>First Name</label>
+              <div style={styles.inputWrapper}>
+                <input
+                  id="firstName"
+                  type="text"
+                  placeholder="First Name"
+                  style={styles.input}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+              </div>
+
+              
+              <label htmlFor="lastName" style={styles.label}>Last Name</label>
+              <div style={styles.inputWrapper}>
+                <input
+                  id="lastName"
+                  type="text"
+                  placeholder="Last Name"
+                  style={styles.input}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
+
+
               <label htmlFor="email" style={styles.label}>Email</label>
               <div style={styles.inputWrapper}>
                 <input
@@ -220,8 +219,6 @@ export default function Register() {
                 />
               </div>
 
-
-              {/* NEW: Graduation Year */}
               <label htmlFor="gradYear" style={styles.label}>Graduation year</label>
               <div style={styles.inputWrapper}>
                 <input
@@ -237,6 +234,9 @@ export default function Register() {
                   required
                 />
               </div>
+
+              
+             
 
               <div style={styles.error}>{error}</div>
               <div style={styles.success}>{success}</div>
