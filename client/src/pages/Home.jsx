@@ -1,8 +1,36 @@
 // src/pages/Home.jsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 
 export default function Home() {
+  const [displayName, setDisplayName] = useState("");
+
+  useEffect(() => {
+    const loadName = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) return;
+
+      // Try users.full_name first
+      const { data: row, error: selErr } = await supabase
+        .from('users')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const fromUsers = row?.full_name?.trim();
+      const fromMeta  = user.user_metadata?.full_name?.trim();
+      const fromEmail = (user.email || row?.email || '')
+        .split('@')[0]
+        .replace(/[._-]/g, ' ')
+        .trim();
+
+      setDisplayName(fromUsers || fromMeta || fromEmail || 'there');
+    };
+
+    loadName();
+  }, []);
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -14,7 +42,7 @@ export default function Home() {
     }}>
       <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800 }}>HooPlannedThis</h1>
       <p style={{ marginTop: 8, fontSize: 16 }}>
-        Welcome! You’re logged in.
+        welcome. you’re logged in, {displayName || '…'}
       </p>
 
       <div style={{
@@ -29,11 +57,11 @@ export default function Home() {
         <Link to="/committees" style={tileStyle}>Committees</Link>
         <Link to="/profile" style={tileStyle}>Profile</Link>
         <Link to="/classcouncil" style={tileStyle}>Class Council</Link>
-        <Link to="/advisor" style={tileStyle}>Advisors</Link>
+        <Link to="/advisors" style={tileStyle}>Advisors</Link>
         <Link to="/budget" style={tileStyle}>Budget</Link>
         <Link to="/volunteersignup" style={tileStyle}>Volunteer Sign-Up</Link>
         <Link to="/events/manage" style={tileStyle}>Manage Events</Link>
-        <Link to="/login" style={tileStyle}>Logout</Link>
+        <Link to="/login" style={tileStyle}>Log Out</Link>
         <Link to="/admin" style={tileStyle}>Admin</Link>
       </div>
     </div>
