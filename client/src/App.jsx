@@ -7,6 +7,7 @@ import Register from "./pages/Register.jsx";
 import Profile from "./pages/Profile.jsx";
 import Advisor from "./pages/Advisor.jsx";
 import Admin from "./pages/Admin.jsx";
+import AdminLogin from "./pages/AdminLogin.jsx";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/home" element={<Home />} /> 
         <Route path="/Profile" element={<Profile />} /> 
         <Route path="/Advisor" element={<Advisor />} />
+        <Route path="/AdminLogin" element={<AdminLogin />} />
         <Route path="/Admin" element={<Admin />} />
         <Route path="/dashboard" element={<h1>Dashboard (protected)</h1>} />
         <Route path="/register" element={<Register />} />
