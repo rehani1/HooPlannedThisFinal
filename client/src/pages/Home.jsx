@@ -1,94 +1,41 @@
-// src/pages/Home.jsx
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
+import React from "react";
 
 export default function Home() {
-  const [displayName, setDisplayName] = useState("");
-
-  useEffect(() => {
-    const loadName = async () => {
-      const { data: { user }, error: authErr } = await supabase.auth.getUser();
-      if (authErr || !user) return;
-
-      // Ask for both, in case your schema uses one or the other
-      const { data: row, error: selErr } = await supabase
-        .from("users")
-        .select("first_name, full_name")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (selErr) {
-        console.error("users select error:", selErr);
-      }
-
-      const fromUsers =
-        (row?.first_name?.trim()) ||
-        (row?.full_name ? row.full_name.split(" ")[0].trim() : "");
-
-      const fromMeta =
-        (user.user_metadata?.first_name?.trim()) ||
-        (user.user_metadata?.full_name
-          ? user.user_metadata.full_name.split(" ")[0].trim()
-          : "");
-
-      const fromEmail = (user.email || "")
-        .split("@")[0]
-        .replace(/[._-]/g, " ")
-        .trim();
-
-      setDisplayName(fromUsers || fromMeta || fromEmail || "there");
-    };
-
-    loadName();
-  }, []);
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      padding: '32px',
-      boxSizing: 'border-box',
-      fontFamily: '"Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-      background: '#ffffff',
-      color: '#003e83'
-    }}>
-      <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800 }}>HooPlannedThis</h1>
-      <p style={{ marginTop: 8, fontSize: 16 }}>
-        welcome. you’re logged in, {displayName || '…'}
-      </p>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', color: '#1e293b' }}>
+      <aside style={{ width: '240px', backgroundColor: '#0e2a47', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ padding: '24px', fontSize: '20px', fontWeight: 'bold' }}>Navigation</div>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 16px' }}>
+            <button style={navButton}>Home</button>
+            <button style={navButton}>Class Council</button>
+            <button style={navButton}>Events</button>
+            <button style={navButton}>Advisors</button>
+          </nav>
+        </div>
 
-      <div style={{
-        marginTop: 24,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        gap: 12,
-        maxWidth: 800
-      }}>
-        <Link to="/events" style={tileStyle}>Events</Link>
-        <Link to="/events/createevent" style={tileStyle}>Create Event</Link>
-        <Link to="/committees" style={tileStyle}>Committees</Link>
-        <Link to="/profile" style={tileStyle}>Profile</Link>
-        <Link to="/classcouncil" style={tileStyle}>Class Council</Link>
-        <Link to="/advisors" style={tileStyle}>Advisors</Link>
-        <Link to="/budget" style={tileStyle}>Budget</Link>
-        <Link to="/volunteersignup" style={tileStyle}>Volunteer Sign-Up</Link>
-        <Link to="/events/manage" style={tileStyle}>Manage Events</Link>
-        <Link to="/login" style={tileStyle}>Log Out</Link>
-        <Link to="/admin" style={tileStyle}>Admin</Link>
-      </div>
+        <div style={{ padding: '16px' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '8px', opacity: 0.9 }}>Settings</div>
+          <button style={navButton}>Admin</button>
+          <button style={navButton}>Log Out</button>
+        </div>
+      </aside>
+
+      <main style={{ flex: 1, padding: '48px' }}>
+        <h1 style={{ fontSize: '36px', fontWeight: '900', color: '#1e3a8a' }}>Welcome to HooPlannedThis!</h1>
+      </main>
     </div>
   );
 }
 
-const tileStyle = {
-  display: 'grid',
-  placeItems: 'center',
-  textDecoration: 'none',
-  height: 64,
-  borderRadius: 12,
-  border: '1px solid #eef1f4',
-  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)',
-  background: '#ffffff',
-  color: '#003e83',
-  fontWeight: 600
+const navButton = {
+  backgroundColor: 'transparent',
+  color: 'white',
+  border: 'none',
+  textAlign: 'left',
+  padding: '12px 16px',
+  borderRadius: '8px',
+  fontSize: '16px',
+  cursor: 'pointer',
+  transition: 'background 0.2s',
 };
