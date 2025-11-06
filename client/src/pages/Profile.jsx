@@ -2,19 +2,19 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { uploadProfilePhoto, getProfilePhotoFromRow } from "../lib/profilePhoto";
 
 export default function Profile() {
   const [fullName, setFullName] = useState(null);
   const [email, setEmail] = useState(null);
   const [gradYear, setGradYear] = useState(null);
-  const [photoUrl, setPhotoUrl] = useState("/cav_man.png"); // default cav man
+  const [photoUrl, setPhotoUrl] = useState("/cav-man.png");
   const [msg, setMsg] = useState("Loading...");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   const fileInputRef = useRef(null);
 
-  // build name from row or auth
   const buildName = (row, user) => {
     const rowFirst = row?.first_name?.trim();
     const rowLast = row?.last_name?.trim();
@@ -33,7 +33,7 @@ export default function Profile() {
     return fromRow || fromMeta || fromEmail || null;
   };
 
-  // load user profile
+  // load data
   useEffect(() => {
     const run = async () => {
       setMsg("Fetching auth user...");
@@ -49,7 +49,6 @@ export default function Profile() {
         return;
       }
 
-      // get their users row
       const { data: row, error: selectErr } = await supabase
         .from("users")
         .select("id, email, grad_year, first_name, last_name, full_name, profile_picture")
@@ -57,12 +56,11 @@ export default function Profile() {
         .maybeSingle();
 
       if (selectErr) {
-        console.error(selectErr);
         setMsg(`Users select error: ${selectErr.message}`);
         setEmail(user.email);
         setFullName(buildName(null, user));
         setGradYear(user.user_metadata?.grad_year ?? null);
-        setPhotoUrl("/cav_man.png");
+        setPhotoUrl("/cav-man.png");
         return;
       }
 
@@ -70,25 +68,14 @@ export default function Profile() {
         setEmail(row.email ?? user.email);
         setGradYear(row.grad_year ?? user.user_metadata?.grad_year ?? null);
         setFullName(row.full_name?.trim() || buildName(row, user));
-
-        // if they already have a profile picture, turn it into a public URL
-        if (row.profile_picture) {
-          const { data: pub } = supabase
-            .storage
-            .from("avatars")
-            .getPublicUrl(row.profile_picture);
-          setPhotoUrl(pub?.publicUrl ?? "/cav_man.png");
-        } else {
-          setPhotoUrl("/cav_man.png");
-        }
-
+        // ✅ use helper for photo
+        setPhotoUrl(getProfilePhotoFromRow(row));
         setMsg("OK");
       } else {
-        // no row, just show auth info + default image
         setEmail(user.email);
         setFullName(buildName(null, user));
         setGradYear(user.user_metadata?.grad_year ?? null);
-        setPhotoUrl("/cav_man.png");
+        setPhotoUrl("/cav-man.png");
         setMsg("No row in users for this id.");
       }
     };
@@ -96,66 +83,25 @@ export default function Profile() {
     run();
   }, []);
 
-  // handle image upload
+  // upload handler now becomes tiny
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload an image file.");
-      return;
-    }
 
     setUploading(true);
     setError("");
     setMsg("Uploading avatar…");
 
-    // 1) get current user
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !user) {
+    const { publicUrl, error } = await uploadProfilePhoto(file);
+
+    if (error) {
       setUploading(false);
-      setMsg(authErr ? authErr.message : "No user logged in.");
-      return;
-    }
-
-    // 2) build a path like userId/timestamp.ext
-    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-    const fileName = `${Date.now()}.${ext}`;
-    const path = `${user.id}/${fileName}`;
-
-    // 3) upload to storage
-    const { error: uploadErr } = await supabase
-      .storage
-      .from("avatars")
-      .upload(path, file, {
-        cacheControl: "3600",
-        upsert: true,
-        contentType: file.type,
-      });
-
-    if (uploadErr) {
-      setUploading(false);
-      setError(uploadErr.message);
+      setError(error.message ?? String(error));
       setMsg("Upload failed.");
       return;
     }
 
-    // 4) save the path to users.profile_picture
-    const { error: updateErr } = await supabase
-      .from("users")
-      .update({ profile_picture: path })
-      .eq("id", user.id);
-
-    if (updateErr) {
-      setUploading(false);
-      setError(updateErr.message);
-      setMsg("Saved file, but could not save profile.");
-      return;
-    }
-
-    // 5) show it right away
-    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-    setPhotoUrl(pub?.publicUrl ?? "/cav_man.png");
+    setPhotoUrl(publicUrl || "/cav-man.png");
     setMsg("Avatar updated!");
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -182,7 +128,7 @@ export default function Profile() {
                   border: "2px solid #ccc",
                   background: "#fff",
                 }}
-                onError={() => setPhotoUrl("/cav_man.png")}
+                onError={() => setPhotoUrl("/cav-man.png")}
               />
               <label
                 htmlFor="photoUpload"
@@ -209,7 +155,6 @@ export default function Profile() {
               />
             </div>
 
-            {/* Name + email */}
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#003e83" }}>
                 {fullName ?? "—"}
@@ -220,7 +165,6 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Save button placeholder */}
           {/*<button*/}
           {/*  type="button"*/}
           {/*  style={{*/}
@@ -305,6 +249,3 @@ const backLinkStyle = {
   color: "#003e83",
   fontWeight: 600,
 };
-
-
-
