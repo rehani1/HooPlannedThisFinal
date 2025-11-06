@@ -12,7 +12,7 @@ export default function Admin() {
 
   const lock = () => {
     sessionStorage.removeItem("admin_unlocked");
-    navigate("/adminlogin", { replace: true });
+    navigate("/home", { replace: true });
   };
 
   return (
