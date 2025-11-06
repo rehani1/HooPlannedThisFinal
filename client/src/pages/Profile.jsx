@@ -89,7 +89,7 @@ export default function Profile() {
           setEmail(row.email);
           setGradYear(row.grad_year ?? user.user_metadata?.grad_year ?? null);
           setFullName(row.full_name?.trim() || buildName(row, user));
-          setProfilePicture(row.profile_pictuure ?? null);
+          setProfilePicture(row.profile_picture ?? null);
 
           if (row.profile_picture) {
             const { data: pub } = supabase.storage.from('avatars').getPublicUrl(row.profile_picture);

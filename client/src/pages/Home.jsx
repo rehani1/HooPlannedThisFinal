@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 export default function Home() {
   return (
@@ -7,17 +8,18 @@ export default function Home() {
         <div>
           <div style={{ padding: '24px', fontSize: '20px', fontWeight: 'bold' }}>Navigation</div>
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 16px' }}>
-            <button style={navButton}>Home</button>
+            <Link to="/home" style={navButton}>Home</Link>
             <button style={navButton}>Class Council</button>
-            <button style={navButton}>Events</button>
-            <button style={navButton}>Advisors</button>
+            <Link to="/events" style={navButton}>Events</Link>
+            <Link to="/advisor" style={navButton}>Advisors</Link>
           </nav>
         </div>
 
         <div style={{ padding: '16px' }}>
           <div style={{ fontWeight: 'bold', marginBottom: '8px', opacity: 0.9 }}>Settings</div>
-          <button style={navButton}>Admin</button>
-          <button style={navButton}>Log Out</button>
+          <Link to="/admin" style={navButton}>Admin</Link>
+          <Link to="/home" style={navButton}>Log Out</Link>
+          <Link to="/profile" style={navButton}>Profile</Link>
         </div>
       </aside>
 
