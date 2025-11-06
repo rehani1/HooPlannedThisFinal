@@ -186,15 +186,38 @@ export default function Login() {
               </button>
             </form>
 
-            <div style={styles.linkRow}>
-              New here? <Link to="/register">Create an account</Link>
+            {/*<div style={styles.linkRow}>*/}
+            {/*  New here? <Link to="/register">Create an account</Link>*/}
+            {/*</div>*/}
+              <div style={{ marginTop: 16 }}>
+                <Link to="/register" style={{ textDecoration: "none" }}>
+                <button
+                  type="button"
+                  style={{
+                    ...styles.primaryBtn,
+                    width: "100%",
+                    marginTop: 8,
+                    background: COLORS.orange,
+                    color: COLORS.white,
+                    fontWeight: 600,
+                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)",
+                    transition: "background 0.2s ease",
+                    cursor: "pointer",
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.background = "#ff9a50")}
+                  onMouseOut={(e) => (e.currentTarget.style.background = COLORS.orange)}
+                >
+                  Create an Account
+                </button>
+              </Link>
             </div>
 
-            <div style={styles.linkRow}>
-              <button type="button" style={{ ...styles.primaryBtn, background: "transparent", color: COLORS.navy, border: `2px solid ${COLORS.navy}` }} onClick={gotoRequest}>
-                Request a New Account
-              </button>
-            </div>
+
+            {/*<div style={styles.linkRow}>*/}
+            {/*  <button type="button" style={{ ...styles.primaryBtn, background: "transparent", color: COLORS.navy, border: `2px solid ${COLORS.navy}` }} onClick={gotoRequest}>*/}
+            {/*    Request a New Account*/}
+            {/*  </button>*/}
+            {/*</div>*/}
 
           </div>
         </div>
