@@ -1,171 +1,163 @@
 // src/pages/Profile.jsx
-import React, { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
 export default function Profile() {
   const [fullName, setFullName] = useState(null);
   const [email, setEmail] = useState(null);
   const [gradYear, setGradYear] = useState(null);
-  const [photoUrl, setPhotoUrl] = useState(null);   // URL used by <img>
-  const [profilePicture, setProfilePicture] = useState(null); // path stored in DB
+  const [photoUrl, setPhotoUrl] = useState("/cav_man.png"); // default cav man
   const [msg, setMsg] = useState("Loading...");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   const fileInputRef = useRef(null);
 
-  // helper: compose name from row or metadata
+  // build name from row or auth
   const buildName = (row, user) => {
-    const first = row?.first_name?.trim();
-    const last  = row?.last_name?.trim();
-    const fromRow = [first, last].filter(Boolean).join(' ').trim();
+    const rowFirst = row?.first_name?.trim();
+    const rowLast = row?.last_name?.trim();
+    const fromRow = [rowFirst, rowLast].filter(Boolean).join(" ").trim();
 
+    const metaFull = user?.user_metadata?.full_name?.trim();
     const metaFirst = user?.user_metadata?.first_name?.trim();
-    const metaLast  = user?.user_metadata?.last_name?.trim();
-    const metaFull  = user?.user_metadata?.full_name?.trim();
-    const fromMeta  = metaFull || [metaFirst, metaLast].filter(Boolean).join(' ').trim();
+    const metaLast = user?.user_metadata?.last_name?.trim();
+    const fromMeta = metaFull || [metaFirst, metaLast].filter(Boolean).join(" ").trim();
 
-    const fromEmail = (user?.email || row?.email || '')
-      .split('@')[0]
-      .replace(/[._-]/g, ' ')
+    const fromEmail = (user?.email || row?.email || "")
+      .split("@")[0]
+      .replace(/[._-]/g, " ")
       .trim();
 
-    return (fromRow || fromMeta || fromEmail || null);
+    return fromRow || fromMeta || fromEmail || null;
   };
 
+  // load user profile
   useEffect(() => {
     const run = async () => {
       setMsg("Fetching auth user...");
       setError("");
 
       const { data: { user }, error: authErr } = await supabase.auth.getUser();
-      if (authErr) { setMsg(`Auth error: ${authErr.message}`); return; }
-      if (!user) { setMsg("No user logged in."); return; }
+      if (authErr) {
+        setMsg(`Auth error: ${authErr.message}`);
+        return;
+      }
+      if (!user) {
+        setMsg("No user logged in.");
+        return;
+      }
 
-      // Try by id – include avatar_path and name fields
-      const byId = await supabase
-        .from('users')
-        .select('id, email, grad_year, first_name, last_name, full_name, profile_picture')
-        .eq('id', user.id)
+      // get their users row
+      const { data: row, error: selectErr } = await supabase
+        .from("users")
+        .select("id, email, grad_year, first_name, last_name, full_name, profile_picture")
+        .eq("id", user.id)
         .maybeSingle();
 
-      if (byId.error) {
-        console.error("Users by id error:", byId.error);
-        setMsg(`Users select error: ${byId.error.message}`);
+      if (selectErr) {
+        console.error(selectErr);
+        setMsg(`Users select error: ${selectErr.message}`);
         setEmail(user.email);
-        setGradYear(user.user_metadata?.grad_year ?? null);
         setFullName(buildName(null, user));
-      } else if (byId.data) {
-        const row = byId.data;
+        setGradYear(user.user_metadata?.grad_year ?? null);
+        setPhotoUrl("/cav_man.png");
+        return;
+      }
+
+      if (row) {
         setEmail(row.email ?? user.email);
         setGradYear(row.grad_year ?? user.user_metadata?.grad_year ?? null);
         setFullName(row.full_name?.trim() || buildName(row, user));
-        setProfilePicture(row.profile_picture ?? null);
 
+        // if they already have a profile picture, turn it into a public URL
         if (row.profile_picture) {
-          const { data: pub } = supabase.storage.from('avatars').getPublicUrl(row.profile_picture);
-          setPhotoUrl(pub?.publicUrl ?? null);
+          const { data: pub } = supabase
+            .storage
+            .from("avatars")
+            .getPublicUrl(row.profile_picture);
+          setPhotoUrl(pub?.publicUrl ?? "/cav_man.png");
+        } else {
+          setPhotoUrl("/cav_man.png");
         }
+
         setMsg("OK");
       } else {
-        // diagnostic: try by email (id mismatch)
-        const byEmail = await supabase
-          .from('users')
-          .select('id, email, grad_year, first_name, last_name, full_name, profile_picture')
-          .eq('email', user.email)
-          .maybeSingle();
-
-        if (byEmail.error) {
-          console.error("Users by email error:", byEmail.error);
-          setMsg("No matching row found (and by-email check errored).");
-          setEmail(user.email);
-          setGradYear(user.user_metadata?.grad_year ?? null);
-          setFullName(buildName(null, user));
-        } else if (byEmail.data) {
-          const row = byEmail.data;
-          console.warn("ID mismatch:", { auth_id: user.id, row_id: row.id, email: row.email });
-          setMsg("ID mismatch: row exists but users.id ≠ auth.user.id");
-          setEmail(row.email);
-          setGradYear(row.grad_year ?? user.user_metadata?.grad_year ?? null);
-          setFullName(row.full_name?.trim() || buildName(row, user));
-          setProfilePicture(row.profile_picture ?? null);
-
-          if (row.profile_picture) {
-            const { data: pub } = supabase.storage.from('avatars').getPublicUrl(row.profile_picture);
-            setPhotoUrl(pub?.publicUrl ?? null);
-          }
-        } else {
-          setMsg("No matching row in users. (Consider upserting on login.)");
-          setEmail(user.email);
-          setGradYear(user.user_metadata?.grad_year ?? null);
-          setFullName(buildName(null, user));
-        }
+        // no row, just show auth info + default image
+        setEmail(user.email);
+        setFullName(buildName(null, user));
+        setGradYear(user.user_metadata?.grad_year ?? null);
+        setPhotoUrl("/cav_man.png");
+        setMsg("No row in users for this id.");
       }
     };
 
     run();
   }, []);
 
-  // === File upload handler for the "Edit Photo" input ===
+  // handle image upload
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!/^image\/(png|jpe?g|gif|webp)$/i.test(file.type)) {
-      setError("Please upload a PNG, JPG, GIF, or WEBP image.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image is too large (max 5MB).");
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload an image file.");
       return;
     }
 
     setUploading(true);
-    setMsg("Uploading avatar…");
     setError("");
+    setMsg("Uploading avatar…");
 
+    // 1) get current user
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
     if (authErr || !user) {
       setUploading(false);
-      setMsg(authErr ? `Auth error: ${authErr.message}` : "No user logged in.");
+      setMsg(authErr ? authErr.message : "No user logged in.");
       return;
     }
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+    // 2) build a path like userId/timestamp.ext
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
     const fileName = `${Date.now()}.${ext}`;
     const path = `${user.id}/${fileName}`;
 
-    const { error: upErr } = await supabase
+    // 3) upload to storage
+    const { error: uploadErr } = await supabase
       .storage
-      .from('avatars')
-      .upload(path, file, { cacheControl: '3600', upsert: true, contentType: file.type });
+      .from("avatars")
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: file.type,
+      });
 
-    if (upErr) {
+    if (uploadErr) {
       setUploading(false);
+      setError(uploadErr.message);
       setMsg("Upload failed.");
-      setError(upErr.message);
       return;
     }
 
-    // Save path into users.avatar_path
-    const { error: updErr } = await supabase
-      .from('users')
+    // 4) save the path to users.profile_picture
+    const { error: updateErr } = await supabase
+      .from("users")
       .update({ profile_picture: path })
-      .eq('id', user.id);
+      .eq("id", user.id);
 
-    if (updErr) {
+    if (updateErr) {
       setUploading(false);
-      setMsg("Saved file but failed to update profile row.");
-      setError(updErr.message);
+      setError(updateErr.message);
+      setMsg("Saved file, but could not save profile.");
       return;
     }
 
-    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
-    setProfilePicture(path);
-    setPhotoUrl(pub?.publicUrl ?? null);
-    setUploading(false);
+    // 5) show it right away
+    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+    setPhotoUrl(pub?.publicUrl ?? "/cav_man.png");
     setMsg("Avatar updated!");
+    setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -174,35 +166,34 @@ export default function Profile() {
       <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700 }}>My Profile</h1>
       <p style={{ marginTop: 8, fontSize: 16 }}>Here you can view and update your information.</p>
 
-      {/* 🔽🔽 Place your provided block RIGHT HERE (wired to our state/handler) */}
-      <div style={{ padding: '40px', maxWidth: '850px', margin:0 }}>
-        {/* Top row: photo + name + save button */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            {/* Profile picture */}
-            <div style={{ textAlign: 'center' }}>
+      <div style={{ padding: "40px", maxWidth: "850px", margin: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+            {/* Profile picture + upload */}
+            <div style={{ textAlign: "center" }}>
               <img
-                src={photoUrl || 'https://avatar.iran.liara.run/public'}
+                src={photoUrl}
                 alt="Profile"
                 style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '2px solid #ccc'
+                  width: "100px",
+                  height: "100px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "2px solid #ccc",
+                  background: "#fff",
                 }}
-                onError={() => setPhotoUrl(null)}
+                onError={() => setPhotoUrl("/cav_man.png")}
               />
-
               <label
                 htmlFor="photoUpload"
                 style={{
-                  display: 'block',
-                  marginTop: '8px',
-                  fontSize: '12px',
-                  color: '#007bff',
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
+                  display: "block",
+                  marginTop: "8px",
+                  fontSize: "12px",
+                  color: "#007bff",
+                  cursor: uploading ? "not-allowed" : "pointer",
+                  textDecoration: "underline",
+                  opacity: uploading ? 0.6 : 1,
                 }}
               >
                 {uploading ? "Uploading…" : "Edit Photo"}
@@ -213,46 +204,45 @@ export default function Profile() {
                 accept="image/*"
                 onChange={handlePhotoUpload}
                 ref={fileInputRef}
-                style={{ display: 'none' }}
+                style={{ display: "none" }}
+                disabled={uploading}
               />
             </div>
 
             {/* Name + email */}
             <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#003e83' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#003e83" }}>
                 {fullName ?? "—"}
               </div>
-              <div style={{ fontSize: 14, color: '#54637a' }}>
+              <div style={{ fontSize: 14, color: "#54637a" }}>
                 {email ?? "—"}
               </div>
             </div>
           </div>
 
-          {/* (Optional) Save button placeholder — wire to name edits if you add inputs later */}
-          <button
-            type="button"
-            style={{
-              border: '1px solid #eef1f4',
-              background: '#ffffff',
-              color: '#003e83',
-              padding: '10px 14px',
-    
-              borderRadius: 10,
-              cursor: uploading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)',
-              fontSize: 14,
-              fontWeight: 600
-            }}
-            disabled={uploading}
-            onClick={() => setMsg("Nothing to save yet — add name inputs to enable.")}
-          >
-            Save
-          </button>
+          {/* Save button placeholder */}
+          {/*<button*/}
+          {/*  type="button"*/}
+          {/*  style={{*/}
+          {/*    border: "1px solid #eef1f4",*/}
+          {/*    background: "#ffffff",*/}
+          {/*    color: "#003e83",*/}
+          {/*    padding: "10px 14px",*/}
+          {/*    borderRadius: 10,*/}
+          {/*    cursor: "not-allowed",*/}
+          {/*    opacity: 0.5,*/}
+          {/*    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)",*/}
+          {/*    fontSize: 14,*/}
+          {/*    fontWeight: 600,*/}
+          {/*  }}*/}
+          {/*  disabled*/}
+          {/*>*/}
+          {/*  Save*/}
+          {/*</button>*/}
         </div>
       </div>
-      {/* 🔼🔼 End inserted block */}
 
-      <div style={{ marginTop: 24, display: 'grid', gap: 16, maxWidth: 500 }}>
+      <div style={{ marginTop: 24, display: "grid", gap: 16, maxWidth: 500 }}>
         <div style={cardStyle}>
           <strong>Name:</strong> {fullName ?? "—"}
         </div>
@@ -263,25 +253,58 @@ export default function Profile() {
           <strong>Graduation Year:</strong> {gradYear ?? "—"}
         </div>
         {!!error && (
-          <div style={{ ...noteStyle, borderColor:'#ffd7d7', background:'#fff4f4', color:'#b00020' }}>
+          <div style={{ ...noteStyle, borderColor: "#ffd7d7", background: "#fff4f4", color: "#b00020" }}>
             {error}
           </div>
         )}
         <div style={noteStyle}>
-          <small>Status: <span style={{ color: /error|fail|mismatch/i.test(msg) ? 'red' : '#4a5568' }}>{msg}</span></small>
+          <small>
+            Status:{" "}
+            <span style={{ color: /error|fail|failed|upload/i.test(msg) ? "red" : "#4a5568" }}>
+              {msg}
+            </span>
+          </small>
         </div>
       </div>
 
       <div style={{ marginTop: 32 }}>
-        <Link to="/home" style={backLinkStyle}>← Back to Home</Link>
+        <Link to="/home" style={backLinkStyle}>
+          ← Back to Home
+        </Link>
       </div>
     </div>
   );
 }
 
 /* styles */
-const containerStyle = { minHeight:'100vh', padding:'32px', boxSizing:'border-box', fontFamily:'"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif', background:'#fff', color:'#003e83' };
-const cardStyle = { padding:'16px', borderRadius:12, border:'1px solid #eef1f4', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)', background:'#fff', fontSize:15 };
-const noteStyle = { padding:'8px 12px', borderRadius:8, background:'#f7fafc', border:'1px dashed #e2e8f0', color:'#4a5568' };
-const backLinkStyle = { textDecoration:'none', color:'#003e83', fontWeight:600 };
+const containerStyle = {
+  minHeight: "100vh",
+  padding: "32px",
+  boxSizing: "border-box",
+  fontFamily: '"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
+  background: "#fff",
+  color: "#003e83",
+};
+const cardStyle = {
+  padding: "16px",
+  borderRadius: 12,
+  border: "1px solid #eef1f4",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)",
+  background: "#fff",
+  fontSize: 15,
+};
+const noteStyle = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  background: "#f7fafc",
+  border: "1px dashed #e2e8f0",
+  color: "#4a5568",
+};
+const backLinkStyle = {
+  textDecoration: "none",
+  color: "#003e83",
+  fontWeight: 600,
+};
+
+
 

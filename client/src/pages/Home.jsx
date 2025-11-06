@@ -18,7 +18,7 @@ export default function Home() {
         <div style={{ padding: '16px' }}>
           <div style={{ fontWeight: 'bold', marginBottom: '8px', opacity: 0.9 }}>Settings</div>
           <Link to="/admin" style={navButton}>Admin</Link>
-          <Link to="/home" style={navButton}>Log Out</Link>
+          <Link to="/login" style={navButton}>Log Out</Link>
           <Link to="/profile" style={navButton}>Profile</Link>
         </div>
       </aside>
