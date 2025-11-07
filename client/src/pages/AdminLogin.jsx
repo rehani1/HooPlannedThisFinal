@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 
-const ADMIN_PASSWORD = "HooAdmin!2025"; // ← change me
+const ADMIN_PASSWORD = "admin"; // ← change me
 
 export default function AdminLogin() {
   const navigate = useNavigate();
