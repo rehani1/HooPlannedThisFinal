@@ -72,9 +72,11 @@ export default function Advisor() {
                     {a.advisor_role ? (
                       <>
                         {" "}
-                        • <em>{a.advisor_role}</em>
+                        • {Array.isArray(a.advisor_role) ? a.advisor_role.join(", ") : a.advisor_role || "—"}
                       </>
                     ) : null}
+
+
                     <br />
                     <strong>Email:</strong> {a.advisor_email || "—"}
                     <br />
