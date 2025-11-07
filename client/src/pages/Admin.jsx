@@ -307,6 +307,38 @@ function AdvisorManager() {
                       setEditForm({ ...editForm, advisor_email: e.target.value })
                     }
                   />
+                    <input
+                    style={inputSmall}
+                    placeholder="Phone Number"
+                    value={editForm.advisor_number}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, advisor_number: e.target.value })
+                    }
+                  />
+                    <input
+                    style={inputSmall}
+                    placeholder="Building"
+                    value={editForm.advisor_building}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, advisor_building: e.target.value })
+                    }
+                  />
+                    <input
+                    style={inputSmall}
+                    placeholder="Address"
+                    value={editForm.advisor_address}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, advisor_address: e.target.value })
+                    }
+                  />
+                    <input
+                    style={inputSmall}
+                    placeholder="Profile Picture"
+                    value={editForm.advisor_profile_picture}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, advisor_profile_picture: e.target.value })
+                    }
+                  />
                 </div>
               </div>
             ) : (
