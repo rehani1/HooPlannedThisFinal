@@ -30,7 +30,7 @@ export default function AdminLogin() {
     <div style={page}>
       <div style={card}>
         <h1 style={title}>admin</h1>
-        <p style={sub}>Enter the admin password to continue.</p>
+        <p style={sub}>Enter the admin password to continue. PASSWORD = admin </p>
 
         <form onSubmit={handleSubmit}>
           <label htmlFor="adminPw" style={label}>Password</label>
