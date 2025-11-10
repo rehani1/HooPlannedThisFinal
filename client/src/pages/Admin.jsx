@@ -3,17 +3,50 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdvisorManager from "../components/AdvisorManager";
 import CouncilManager from "../components/CouncilManager";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Admin() {
   const navigate = useNavigate();
   const [showAdvisorModal, setShowAdvisorModal] = useState(false);
   const [showCouncilModal, setShowCouncilModal] = useState(false);
 
-  // check admin lock on mount
+  const [showEditCouncilModal, setShowEditCouncilModal] = useState(false);
+  const [councilToEdit, setCouncilToEdit] = useState(null);
+
+  const [councils, setCouncils] = useState([]);
+  const [loadingCouncils, setLoadingCouncils] = useState(true);
+
   useEffect(() => {
     const ok = sessionStorage.getItem("admin_unlocked") === "1";
     if (!ok) navigate("/adminlogin", { replace: true });
   }, [navigate]);
+
+  const loadCouncils = async () => {
+    setLoadingCouncils(true);
+    const { data, error } = await supabase
+      .from("councils")
+      .select(`
+        grad_year,
+        academic_year_fall,
+        academic_year_spring,
+        class_name,
+        class_logo,
+        advisor_id,
+        advisor:advisor_id (
+        advisor_id,
+        advisor_first_name,
+        advisor_last_name
+      )
+      `)
+      .order("grad_year", { ascending: true });
+
+    if (!error) setCouncils(data || []);
+    setLoadingCouncils(false);
+  };
+
+  useEffect(() => {
+    loadCouncils();
+  }, []);
 
   const lock = () => {
     sessionStorage.removeItem("admin_unlocked");
@@ -33,76 +66,157 @@ export default function Admin() {
         <div style={card}>
           <h2 style={h2}>Dashboard</h2>
           <p>Welcome to the admin panel.</p>
-          <button
-            style={btnPrimary}
-            onClick={() => setShowAdvisorModal(true)}
-          >
-            Manage Advisors
-          </button>
-            <button
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+            <button style={btnPrimary} onClick={() => setShowAdvisorModal(true)}>
+              Manage Advisors
+            </button>
+            <button style={btnPrimary} onClick={() => setShowCouncilModal(true)}>
+              Manage Councils
+            </button>
+          </div>
+        </div>
 
-            style={{ ...btnPrimary, marginLeft: 8 }}
-            onClick={() => setShowCouncilModal(true)}
-          >
-            Manage Councils
-          </button>
+        <div style={{ ...card, marginTop: 16 }}>
+          <h2 style={h2}>Councils</h2>
+          {loadingCouncils ? (
+            <p>Loading councils…</p>
+          ) : councils.length === 0 ? (
+            <p>No councils yet.</p>
+          ) : (
+            <div style={councilGrid}>
+              {councils.map((c) => {
+                const label = c.class_name?.name || "Unnamed council";
+                const key = `${label}-${c.grad_year}`;
+                const logoUrl = c.class_logo
+                  ? supabase.storage.from("avatars").getPublicUrl(c.class_logo).data.publicUrl
+                  : null;
+                return (
+                  <div key={key} style={councilBox}>
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt={label}
+                        style={{
+                          width: "100%",
+                          maxHeight: 80,
+                          objectFit: "contain",
+                          marginBottom: 8,
+                        }}
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
+                    ) : null}
+                    <div style={{ fontWeight: 700 }}>{label}</div>
+                    <div style={{ fontSize: 13, color: "#4b5563" }}>
+                      Grad year: {c.grad_year}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#4b5563" }}>
+                      Academic Year: {c.academic_year_fall || "—"}–{c.academic_year_spring || "—"}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#4b5563", marginBottom: 8 }}>
+                      Advisor:{" "}
+                      {c.advisors
+                        ? `${c.advisors.advisor_first_name} ${c.advisors.advisor_last_name}`
+                        : "—"}
+                    </div>
+                    <button
+                      style={btnSmall}
+                      onClick={() => {
+                        setCouncilToEdit(c);
+                        setShowEditCouncilModal(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
 
-      {/* Modal for Manage Advisors */}
+      {/* Advisor modal */}
       {showAdvisorModal && (
         <div style={modalBackdrop} onClick={() => setShowAdvisorModal(false)}>
-          <div
-            style={modalContent}
-            onClick={(e) => e.stopPropagation()} // stop close on inner click
-          >
+          <div style={modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={modalHeader}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-                Manage Advisors
-              </h2>
+              <h2 style={{ margin: 0 }}>Manage Advisors</h2>
               <button
-                onClick={() => setShowAdvisorModal(false)}
                 style={modalCloseBtn}
+                onClick={() => {
+                  setShowAdvisorModal(false);
+                  loadCouncils();
+                }}
               >
                 ✕
               </button>
             </div>
             <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
-              <AdvisorManager onClose={() => setShowAdvisorModal(false)} />
+              <AdvisorManager
+                onChange={loadCouncils}
+                onClose={() => {
+                  setShowAdvisorModal(false);
+                  loadCouncils();
+
+                }}
+              />
             </div>
           </div>
         </div>
       )}
 
-        {showCouncilModal && (
+      {/* Council create modal */}
+      {showCouncilModal && (
         <div style={modalBackdrop} onClick={() => setShowCouncilModal(false)}>
-          <div
-            style={modalContent}
-            onClick={(e) => e.stopPropagation()} // stop close on inner click
-          >
+          <div style={modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={modalHeader}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-                Manage Advisors
-              </h2>
-              <button
-                onClick={() => setShowCouncilModal(false)}
-                style={modalCloseBtn}
-              >
+              <h2 style={{ margin: 0 }}>Manage Councils</h2>
+              <button style={modalCloseBtn} onClick={() => setShowCouncilModal(false)}>
                 ✕
               </button>
             </div>
             <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
-              <CouncilManager onClose={() => setShowCouncilModal(false)} />
+              <CouncilManager
+                onClose={() => {
+                  setShowCouncilModal(false);
+                  loadCouncils();
+                }}
+              />
             </div>
           </div>
         </div>
+      )}
 
+      {/* Council edit modal */}
+      {showEditCouncilModal && councilToEdit && (
+        <div style={modalBackdrop} onClick={() => setShowEditCouncilModal(false)}>
+          <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={modalHeader}>
+              <h2 style={{ margin: 0 }}>Edit Council</h2>
+              <button style={modalCloseBtn} onClick={() => setShowEditCouncilModal(false)}>
+                ✕
+              </button>
+            </div>
+            <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+              <CouncilManager
+                mode="edit"
+                initialCouncil={councilToEdit}
+                onClose={() => {
+                  setShowEditCouncilModal(false);
+                  setCouncilToEdit(null);
+                  loadCouncils();
+
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-/* styles */
+// /* styles */
 const wrap = {
   minHeight: "100vh",
   background: "#ffffff",
@@ -148,7 +262,28 @@ const btnPrimary = {
   padding: "10px 14px",
   fontWeight: 600,
   cursor: "pointer",
-  marginTop: 12,
+  marginTop: 0,
+};
+const councilGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 12,
+};
+const councilBox = {
+  border: "1px solid #eef1f4",
+  borderRadius: 10,
+  padding: 12,
+  background: "#fff",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+};
+const btnSmall = {
+  background: "#fff",
+  color: "#003e83",
+  border: "1px solid #d7dce2",
+  borderRadius: 6,
+  padding: "4px 8px",
+  fontSize: 12,
+  cursor: "pointer",
 };
 
 const modalBackdrop = {
@@ -184,5 +319,3 @@ const modalCloseBtn = {
   cursor: "pointer",
   lineHeight: 1,
 };
-
-

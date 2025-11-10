@@ -6,7 +6,7 @@ import {
   getAdvisorPhotoFromRow,
 } from "../lib/profilePhoto";
 
-export default function AdvisorManager({ onClose }) {
+export default function AdvisorManager({ onChange }) {
   const ROLE_OPTIONS = [
     "First Year Council Advisor",
     "Second Year Council Advisor",
@@ -30,7 +30,6 @@ export default function AdvisorManager({ onClose }) {
     advisor_building: "",
     advisor_address: "",
   });
-  // file for CREATE
   const [newAdvisorFile, setNewAdvisorFile] = useState(null);
 
   // form for EDIT
@@ -45,7 +44,6 @@ export default function AdvisorManager({ onClose }) {
     advisor_address: "",
     advisor_profile_picture: "",
   });
-  // file for EDIT
   const [editAdvisorFile, setEditAdvisorFile] = useState(null);
 
   useEffect(() => {
@@ -140,7 +138,10 @@ export default function AdvisorManager({ onClose }) {
     });
     setNewAdvisorFile(null);
 
-    loadAdvisors();
+    await loadAdvisors();
+    if (typeof onChange === "function") {
+      onChange();
+    }
   };
 
   const deleteAdvisor = async (id) => {
@@ -157,7 +158,10 @@ export default function AdvisorManager({ onClose }) {
       if (editingId === id) {
         setEditingId(null);
       }
-      loadAdvisors();
+      await loadAdvisors();
+      if (typeof onChange === "function") {
+        onChange();
+      }
     }
   };
 
@@ -212,7 +216,7 @@ export default function AdvisorManager({ onClose }) {
         setErrorMsg(
           photoErr.message || "Advisor updated, but photo upload failed."
         );
-        loadAdvisors();
+        await loadAdvisors();
         return;
       }
     }
@@ -220,7 +224,12 @@ export default function AdvisorManager({ onClose }) {
     setSuccessMsg("Advisor updated.");
     setEditingId(null);
     setEditAdvisorFile(null);
-    loadAdvisors();
+    await loadAdvisors();
+
+    // ✅ call parent so it can refresh councils
+    if (typeof onChange === "function") {
+      onChange();
+    }
   };
 
   const cancelEdit = () => {
@@ -277,7 +286,6 @@ export default function AdvisorManager({ onClose }) {
 
   return (
     <div style={{ paddingBottom: 12 }}>
-      {/* create form */}
       <h3 style={{ marginTop: 0, marginBottom: 8 }}>Add New Advisor</h3>
       <div style={{ display: "grid", gap: 8, maxWidth: 520 }}>
         <input
@@ -517,13 +525,8 @@ export default function AdvisorManager({ onClose }) {
         })
       )}
 
-      {onClose && (
-        <div style={{ marginTop: 16, textAlign: "right" }}>
-          <button onClick={onClose} style={btnSecondarySmall}>
-            Close
-          </button>
-        </div>
-      )}
+      {/* optional close button if used in a modal */}
+      {/* parent can pass onClose too if you want */}
     </div>
   );
 }
@@ -604,3 +607,4 @@ const btnSecondarySmall = {
   fontSize: 12,
   cursor: "pointer",
 };
+
