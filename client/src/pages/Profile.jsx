@@ -10,6 +10,7 @@ export default function Profile() {
   const [email, setEmail] = useState(null);
   const [gradYear, setGradYear] = useState(null);
   const [councilName, setCouncilName] = useState(null); // 👈 NEW
+  const [committeeName, setCommitteeName]  = useState(null);
   const [photoUrl, setPhotoUrl] = useState("/cav-man.png");
   const [msg, setMsg] = useState("Loading...");
   const [uploading, setUploading] = useState(false);
@@ -69,7 +70,13 @@ export default function Profile() {
           councils (
             grad_year,
             class_name
-          )
+          ),
+         
+          committees:committee_id (
+           committee_id,
+           committee_name
+           )
+          
         `)
         .eq("id", user.id)
         .maybeSingle();
@@ -82,6 +89,7 @@ export default function Profile() {
         setGradYear(user.user_metadata?.grad_year ?? null);
         setPhotoUrl("/cav-man.png");
         setCouncilName(null); // no council
+        setCommitteeName(null);
         return;
       }
 
@@ -97,6 +105,13 @@ export default function Profile() {
         } else {
           setCouncilName(null);
         }
+        if (row?.committees?.committee_name) {
+          setCommitteeName(row.committees.committee_name);
+        } else {
+          setCommitteeName(null);
+        }
+
+
         setMsg("OK");
       } else {
         setEmail(user.email);
@@ -218,6 +233,9 @@ export default function Profile() {
         </div>
         <div style={cardStyle}>
           <strong>Council:</strong> {councilName ?? "No council for this grad year"}
+        </div>
+        <div style={cardStyle}>
+          <strong>Committee:</strong> {committeeName ?? "No committee assigned"}
         </div>
 
         {!!error && (
