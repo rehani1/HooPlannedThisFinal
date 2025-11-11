@@ -59,6 +59,7 @@ export default function Register() {
   const navigate = useNavigate();
 
   const [email, setEmail] = React.useState("");           // ✅ missing before
+  const [computingId, setComputingId] = React.useState("");
   const [firstName, setFirstName] = React.useState("");   // ✅ fixed name
   const [lastName, setLastName] = React.useState("");     // optional
   const [password, setPassword] = React.useState("");
@@ -87,6 +88,7 @@ export default function Register() {
     setLoading(true);
     const { data, error: signErr } = await supabase.auth.signUp({
       email,
+      computingId,
       password,
       options: {
         // store extras in auth user_metadata
@@ -114,6 +116,7 @@ export default function Register() {
         {
           id: user.id,
           email: user.email,
+          computingId: user.computingId,
           full_name: [firstName, lastName].filter(Boolean).join(" "),
           grad_year: y,
         },
@@ -182,6 +185,20 @@ export default function Register() {
                   autoComplete="email"
                 />
               </div>
+              <label htmlFor="computingId" style={styles.label}>Computing ID</label>
+              <div style={styles.inputWrapper}>
+                <input
+                  id="computingID"
+                  type="text"
+                  placeholder="Computing ID"
+                  style={styles.input}
+                  value={computingId}
+                  onChange={(e) => setComputingId(e.target.value)}
+                  required
+                  autoComplete="computingId"
+                />
+              </div>
+
 
               <label htmlFor="password" style={styles.label}>Password</label>
               <div style={styles.inputWrapper}>

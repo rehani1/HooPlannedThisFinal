@@ -6,6 +6,7 @@ import { uploadProfilePhoto, getProfilePhotoFromRow } from "../lib/profilePhoto"
 
 export default function Profile() {
   const [fullName, setFullName] = useState(null);
+  const [computingId, setComputingId] = useState(null);
   const [email, setEmail] = useState(null);
   const [gradYear, setGradYear] = useState(null);
   const [photoUrl, setPhotoUrl] = useState("/cav-man.png");
@@ -51,13 +52,14 @@ export default function Profile() {
 
       const { data: row, error: selectErr } = await supabase
         .from("users")
-        .select("id, email, grad_year, first_name, last_name, full_name, profile_picture")
+        .select("id, computing_id, email, grad_year, first_name, last_name, full_name, profile_picture")
         .eq("id", user.id)
         .maybeSingle();
 
       if (selectErr) {
         setMsg(`Users select error: ${selectErr.message}`);
         setEmail(user.email);
+        setComputingId(user.user_metadata?.computing_id ?? null);
         setFullName(buildName(null, user));
         setGradYear(user.user_metadata?.grad_year ?? null);
         setPhotoUrl("/cav-man.png");
@@ -66,6 +68,7 @@ export default function Profile() {
 
       if (row) {
         setEmail(row.email ?? user.email);
+        setComputingId(row.computing_id ?? user.user_metadata?.computing_id ?? null);
         setGradYear(row.grad_year ?? user.user_metadata?.grad_year ?? null);
         setFullName(row.full_name?.trim() || buildName(row, user));
         // ✅ use helper for photo
@@ -73,6 +76,7 @@ export default function Profile() {
         setMsg("OK");
       } else {
         setEmail(user.email);
+        setComputingId(user.user_metadata?.computing_id ?? null);
         setFullName(buildName(null, user));
         setGradYear(user.user_metadata?.grad_year ?? null);
         setPhotoUrl("/cav-man.png");
@@ -165,30 +169,15 @@ export default function Profile() {
             </div>
           </div>
 
-          {/*<button*/}
-          {/*  type="button"*/}
-          {/*  style={{*/}
-          {/*    border: "1px solid #eef1f4",*/}
-          {/*    background: "#ffffff",*/}
-          {/*    color: "#003e83",*/}
-          {/*    padding: "10px 14px",*/}
-          {/*    borderRadius: 10,*/}
-          {/*    cursor: "not-allowed",*/}
-          {/*    opacity: 0.5,*/}
-          {/*    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)",*/}
-          {/*    fontSize: 14,*/}
-          {/*    fontWeight: 600,*/}
-          {/*  }}*/}
-          {/*  disabled*/}
-          {/*>*/}
-          {/*  Save*/}
-          {/*</button>*/}
         </div>
       </div>
 
       <div style={{ marginTop: 24, display: "grid", gap: 16, maxWidth: 500 }}>
         <div style={cardStyle}>
           <strong>Name:</strong> {fullName ?? "—"}
+        </div>
+         <div style={cardStyle}>
+          <strong>Computing ID:</strong> {computingId ?? "—"}
         </div>
         <div style={cardStyle}>
           <strong>Email:</strong> {email ?? "—"}
