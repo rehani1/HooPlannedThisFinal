@@ -9,6 +9,7 @@ export default function Profile() {
   const [computingId, setComputingId] = useState(null);
   const [email, setEmail] = useState(null);
   const [gradYear, setGradYear] = useState(null);
+  const [councilName, setCouncilName] = useState(null); // 👈 NEW
   const [photoUrl, setPhotoUrl] = useState("/cav-man.png");
   const [msg, setMsg] = useState("Loading...");
   const [uploading, setUploading] = useState(false);
@@ -40,7 +41,10 @@ export default function Profile() {
       setMsg("Fetching auth user...");
       setError("");
 
-      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authErr,
+      } = await supabase.auth.getUser();
       if (authErr) {
         setMsg(`Auth error: ${authErr.message}`);
         return;
@@ -50,9 +54,23 @@ export default function Profile() {
         return;
       }
 
+      // 🔁 JOIN councils here
       const { data: row, error: selectErr } = await supabase
         .from("users")
-        .select("id, computing_id, email, grad_year, first_name, last_name, full_name, profile_picture")
+        .select(`
+          id,
+          computing_id,
+          email,
+          grad_year,
+          first_name,
+          last_name,
+          full_name,
+          profile_picture,
+          councils (
+            grad_year,
+            class_name
+          )
+        `)
         .eq("id", user.id)
         .maybeSingle();
 
@@ -63,6 +81,7 @@ export default function Profile() {
         setFullName(buildName(null, user));
         setGradYear(user.user_metadata?.grad_year ?? null);
         setPhotoUrl("/cav-man.png");
+        setCouncilName(null); // no council
         return;
       }
 
@@ -71,8 +90,13 @@ export default function Profile() {
         setComputingId(row.computing_id ?? user.user_metadata?.computing_id ?? null);
         setGradYear(row.grad_year ?? user.user_metadata?.grad_year ?? null);
         setFullName(row.full_name?.trim() || buildName(row, user));
-        // ✅ use helper for photo
         setPhotoUrl(getProfilePhotoFromRow(row));
+        // 👇 pull council name from join
+        if (row?.councils?.class_name?.name) {
+          setCouncilName(row.councils.class_name.name);
+        } else {
+          setCouncilName(null);
+        }
         setMsg("OK");
       } else {
         setEmail(user.email);
@@ -80,6 +104,7 @@ export default function Profile() {
         setFullName(buildName(null, user));
         setGradYear(user.user_metadata?.grad_year ?? null);
         setPhotoUrl("/cav-man.png");
+        setCouncilName(null);
         setMsg("No row in users for this id.");
       }
     };
@@ -87,7 +112,7 @@ export default function Profile() {
     run();
   }, []);
 
-  // upload handler now becomes tiny
+  // upload handler
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -117,7 +142,14 @@ export default function Profile() {
       <p style={{ marginTop: 8, fontSize: 16 }}>Here you can view and update your information.</p>
 
       <div style={{ padding: "40px", maxWidth: "850px", margin: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "30px",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
             {/* Profile picture + upload */}
             <div style={{ textAlign: "center" }}>
@@ -168,7 +200,6 @@ export default function Profile() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -176,7 +207,7 @@ export default function Profile() {
         <div style={cardStyle}>
           <strong>Name:</strong> {fullName ?? "—"}
         </div>
-         <div style={cardStyle}>
+        <div style={cardStyle}>
           <strong>Computing ID:</strong> {computingId ?? "—"}
         </div>
         <div style={cardStyle}>
@@ -185,8 +216,19 @@ export default function Profile() {
         <div style={cardStyle}>
           <strong>Graduation Year:</strong> {gradYear ?? "—"}
         </div>
+        <div style={cardStyle}>
+          <strong>Council:</strong> {councilName ?? "No council for this grad year"}
+        </div>
+
         {!!error && (
-          <div style={{ ...noteStyle, borderColor: "#ffd7d7", background: "#fff4f4", color: "#b00020" }}>
+          <div
+            style={{
+              ...noteStyle,
+              borderColor: "#ffd7d7",
+              background: "#fff4f4",
+              color: "#b00020",
+            }}
+          >
             {error}
           </div>
         )}
@@ -214,7 +256,8 @@ const containerStyle = {
   minHeight: "100vh",
   padding: "32px",
   boxSizing: "border-box",
-  fontFamily: '"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
+  fontFamily:
+    '"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
   background: "#fff",
   color: "#003e83",
 };
@@ -222,7 +265,8 @@ const cardStyle = {
   padding: "16px",
   borderRadius: 12,
   border: "1px solid #eef1f4",
-  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)",
+  boxShadow:
+    "0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)",
   background: "#fff",
   fontSize: 15,
 };
