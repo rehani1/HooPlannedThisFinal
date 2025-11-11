@@ -282,79 +282,153 @@ export default function CouncilManager({
       // --------------------------------------------------
 // EDIT MODE
 // --------------------------------------------------
-    if (mode === "edit" && initialCouncil) {
-      console.log("🟦 [CouncilManager] edit submit for council:", initialCouncil);
-      setSaving(true);
+//     if (mode === "edit" && initialCouncil) {
+//       console.log("🟦 [CouncilManager] edit submit for council:", initialCouncil);
+//       setSaving(true);
+//
+//       // compute final spring year again
+//       const springYear = form.academic_year_spring
+//         ? Number(form.academic_year_spring)
+//         : form.academic_year_fall
+//         ? Number(form.academic_year_fall) + 1
+//         : null;
+//
+//       // make sure advisor is either number or null
+//       const advisorId =
+//         form.advisor_id && form.advisor_id !== ""
+//           ? Number(form.advisor_id)
+//           : null;
+//       console.log("🟣 [CouncilManager] final advisorId to save:", advisorId);
+//
+//       // logo stuff
+//       let logoPath = initialCouncil.class_logo || null;
+//       if (logoFile) {
+//         const { error: logoErr, path } = await uploadCouncilLogo(
+//           form.grad_year,
+//           logoFile
+//         );
+//         if (logoErr) {
+//           console.error("❌ [CouncilManager] logo upload error:", logoErr);
+//           setErrorMsg(logoErr.message || "Logo upload failed.");
+//           setSaving(false);
+//           return;
+//         }
+//         logoPath = path;
+//       }
+//
+//       const updatePayload = {
+//         academic_year_fall: form.academic_year_fall
+//           ? Number(form.academic_year_fall)
+//           : null,
+//         academic_year_spring: springYear,
+//         class_name: { name: computedCouncilName },
+//         advisor_id: advisorId,
+//         class_logo: logoPath,
+//       };
+//
+//       console.log("📨 [CouncilManager] update payload:", updatePayload);
+//
+//       const { error } = await supabase
+//         .from("councils")
+//         .update(updatePayload)
+//         .eq("grad_year", Number(initialCouncil.grad_year));
+//
+//       if (error) {
+//         console.error("❌ [CouncilManager] update error:", error);
+//         setErrorMsg(error.message || "Could not update council.");
+//         setSaving(false);
+//         return;
+//       }
+//
+//       console.log("✅ [CouncilManager] council updated in DB");
+//
+//       setSuccessMsg("Council updated.");
+//       setSaving(false);
+//       setLogoFile(null);
+//
+//       if (onClose) {
+//         console.log("🟢 [CouncilManager] calling onClose() so Admin can reload");
+//         onClose();
+//       }
+//
+//       return;
+//     }
+//
+//   };
 
-      // compute final spring year again
-      const springYear = form.academic_year_spring
-        ? Number(form.academic_year_spring)
-        : form.academic_year_fall
-        ? Number(form.academic_year_fall) + 1
-        : null;
+      if (mode === "edit" && initialCouncil) {
 
-      // make sure advisor is either number or null
-      const advisorId =
-        form.advisor_id && form.advisor_id !== ""
-          ? Number(form.advisor_id)
-          : null;
-      console.log("🟣 [CouncilManager] final advisorId to save:", advisorId);
+          setSaving(true);
+          setErrorMsg("");
+          setSuccessMsg("");
 
-      // logo stuff
-      let logoPath = initialCouncil.class_logo || null;
-      if (logoFile) {
-        const { error: logoErr, path } = await uploadCouncilLogo(
-          form.grad_year,
-          logoFile
-        );
-        if (logoErr) {
-          console.error("❌ [CouncilManager] logo upload error:", logoErr);
-          setErrorMsg(logoErr.message || "Logo upload failed.");
+          // make sure it’s an integer or null
+          const advisorId =
+            form.advisor_id && form.advisor_id !== ""
+              ? parseInt(form.advisor_id, 10)
+              : null;
+
+          // recompute spring the same way you do
+          const springYear = form.academic_year_spring
+            ? Number(form.academic_year_spring)
+            : form.academic_year_fall
+            ? Number(form.academic_year_fall) + 1
+            : null;
+
+          // start with the guaranteed-good fields
+          const updatePayload = {
+            academic_year_fall: form.academic_year_fall
+              ? Number(form.academic_year_fall)
+              : null,
+            academic_year_spring: springYear,
+            advisor_id: advisorId,
+          };
+
+          // only add class_name if you actually want to change it
+          if (computedCouncilName) {
+            updatePayload.class_name = { name: computedCouncilName };
+          }
+
+          // only add logo if you actually uploaded one
+          let finalLogoPath = initialCouncil.class_logo || null;
+          if (logoFile) {
+            const { error: logoErr, path } = await uploadCouncilLogo(
+              form.grad_year,
+              logoFile
+            );
+            if (logoErr) {
+              console.error("logo upload error:", logoErr);
+              setErrorMsg(logoErr.message || "Logo upload failed.");
+              setSaving(false);
+              return;
+            }
+            finalLogoPath = path;
+          }
+          updatePayload.class_logo = finalLogoPath;
+
+          const { data, error } = await supabase
+            .from("councils")
+            .update(updatePayload)
+            .eq("grad_year", Number(initialCouncil.grad_year))
+            .select(); // ← let’s see what came back
+
+          if (error) {
+            console.error("❌ council update error:", error);
+            setErrorMsg(error.message || "Could not update council.");
+            setSaving(false);
+            return;
+          }
+
+          console.log("✅ updated council:", data);
+
+          setSuccessMsg("Council updated.");
           setSaving(false);
+          setLogoFile(null);
+          if (onClose) onClose();
           return;
-        }
-        logoPath = path;
       }
 
-      const updatePayload = {
-        academic_year_fall: form.academic_year_fall
-          ? Number(form.academic_year_fall)
-          : null,
-        academic_year_spring: springYear,
-        class_name: { name: computedCouncilName },
-        advisor_id: advisorId,
-        class_logo: logoPath,
       };
-
-      console.log("📨 [CouncilManager] update payload:", updatePayload);
-
-      const { error } = await supabase
-        .from("councils")
-        .update(updatePayload)
-        .eq("grad_year", Number(initialCouncil.grad_year));
-
-      if (error) {
-        console.error("❌ [CouncilManager] update error:", error);
-        setErrorMsg(error.message || "Could not update council.");
-        setSaving(false);
-        return;
-      }
-
-      console.log("✅ [CouncilManager] council updated in DB");
-
-      setSuccessMsg("Council updated.");
-      setSaving(false);
-      setLogoFile(null);
-
-      if (onClose) {
-        console.log("🟢 [CouncilManager] calling onClose() so Admin can reload");
-        onClose();
-      }
-
-      return;
-    }
-
-  };
 
   return (
     <div style={wrap}>
@@ -414,27 +488,7 @@ export default function CouncilManager({
           {computedCouncilName || "—"}
         </div>
 
-        {/*<label style={{ fontSize: 13, color: "#003e83" }}>*/}
-        {/*  Advisor (optional)*/}
-        {/*</label>*/}
-        {/*<select*/}
-        {/*  style={input}*/}
-        {/*  value={form.advisor_id}*/}
-        {/*  onChange={(e) => setForm({ ...form, advisor_id: e.target.value })}*/}
-        {/*>*/}
-        {/*  <option value="">— Select advisor —</option>*/}
-        {/*  {loadingAdvisors ? (*/}
-        {/*    <option disabled>Loading advisors…</option>*/}
-        {/*  ) : advisors.length === 0 ? (*/}
-        {/*    <option disabled>No advisors found</option>*/}
-        {/*  ) : (*/}
-        {/*    advisors.map((a) => (*/}
-        {/*      <option key={a.advisor_id} value={a.advisor_id}>*/}
-        {/*        {a.advisor_first_name} {a.advisor_last_name}*/}
-        {/*      </option>*/}
-        {/*    ))*/}
-        {/*  )}*/}
-        {/*</select>*/}
+
 
         <label style={{ fontSize: 13, color: "#003e83" }}>
           Advisor (optional)
