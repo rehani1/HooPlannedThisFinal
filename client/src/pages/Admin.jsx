@@ -3,6 +3,9 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdvisorManager from "../components/AdvisorManager";
 import CouncilManager from "../components/CouncilManager";
+import CommitteeManager from "../components/CommitteeManager";
+import CommitteeAssign from "../components/CommitteeAssignment";
+
 import { supabase } from "../lib/supabaseClient";
 
 export default function Admin() {
@@ -12,6 +15,10 @@ export default function Admin() {
 
   const [showEditCouncilModal, setShowEditCouncilModal] = useState(false);
   const [councilToEdit, setCouncilToEdit] = useState(null);
+  const [showCommitteeAssign, setShowCommitteeAssign] = useState(false);
+  const [selectedCommittee, setSelectedCommittee] = useState(null);
+
+
 
   const [councils, setCouncils] = useState([]);
   const [loadingCouncils, setLoadingCouncils] = useState(true);
@@ -43,7 +50,12 @@ export default function Admin() {
       last_name, 
       full_name, 
       email, 
-      computing_id
+      computing_id,
+      role
+      ), 
+      committees (
+      committee_name,
+      committee_id
       )
       `)
       .order("grad_year", { ascending: true });
@@ -126,6 +138,42 @@ export default function Admin() {
                         ? <>Advisor: {c.advisor.advisor_first_name} {c.advisor.advisor_last_name}</>
                         : <i>No advisor assigned</i>}
                     </div>
+                    <div style={{ fontSize: 12, color: "#4b5563", marginTop: 4 }}>
+                      Committees:
+                      {c.committees && c.committees.length > 0 ? (
+                        <ul style={{ marginTop: 4, paddingLeft: 16 }}>
+                          {c.committees.map((cm, i) => (
+                            <li key={i}>
+                              <button
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  padding: 0,
+                                  color: "#1d4ed8",
+                                  cursor: "pointer",
+                                  textDecoration: "underline",
+                                }}
+                                onClick={() => {
+                                  // open modal, pass council grad_year + committee
+                                  setSelectedCommittee({
+                                    grad_year: c.grad_year,
+                                    committee_id: cm.committee_id,
+                                    committee_name: cm.committee_name,
+                                  });
+                                  setShowCommitteeAssign(true);
+                                }}
+                              >
+                                {cm.committee_name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span> none</span>
+                      )}
+                    </div>
+
+
                     <div style={{ fontSize: 12, color: "#4b5563" }}>
                       Members:
                       {c.users && c.users.length > 0 ? (
@@ -232,10 +280,27 @@ export default function Admin() {
 
                 }}
               />
+              <CommitteeManager gradYear={councilToEdit.grad_year} />
+
             </div>
           </div>
         </div>
       )}
+      {showCommitteeAssign && selectedCommittee && (
+          <div style={modalBackdrop} onClick={() => setShowCommitteeAssign(false)}>
+            <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+              <CommitteeAssign
+                committee={selectedCommittee}
+                onClose={() => {
+                  setShowCommitteeAssign(false);
+                  setSelectedCommittee(null);
+                  loadCouncils(); // refresh
+                }}
+              />
+            </div>
+          </div>
+        )}
+
     </div>
   );
 }
