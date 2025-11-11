@@ -36,6 +36,14 @@ export default function Admin() {
         advisor_id,
         advisor_first_name,
         advisor_last_name
+      ),
+      users (
+      id, 
+      first_name,
+      last_name, 
+      full_name, 
+      email, 
+      computing_id
       )
       `)
       .order("grad_year", { ascending: true });
@@ -117,6 +125,22 @@ export default function Admin() {
                         {c.advisor
                         ? <>Advisor: {c.advisor.advisor_first_name} {c.advisor.advisor_last_name}</>
                         : <i>No advisor assigned</i>}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#4b5563" }}>
+                      Members:
+                      {c.users && c.users.length > 0 ? (
+                        <ul style={{ marginTop: 4, paddingLeft: 16 }}>
+                          {c.users.map((u) => (
+                            <li key={u.id}>
+                              {u.full_name ||
+                                `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() ||
+                                u.email}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span> none</span>
+                      )}
                     </div>
                     <button
                       style={btnSmall}
