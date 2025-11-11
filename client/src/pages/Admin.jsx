@@ -113,10 +113,11 @@ export default function Admin() {
                       Academic Year: {c.academic_year_fall || "—"}–{c.academic_year_spring || "—"}
                     </div>
                     <div style={{ fontSize: 13, color: "#4b5563", marginBottom: 8 }}>
-                      Advisor:{" "}
-                      {c.advisors
-                        ? `${c.advisors.advisor_first_name} ${c.advisors.advisor_last_name}`
-                        : "—"}
+                      {/*Advisor:{" "}*/}
+                      {/*{c.advisors*/}
+                      {/*  ? `${c.advisors.advisor_first_name} ${c.advisors.advisor_last_name}`*/}
+                      {/*  : "—"}*/}
+                        Advisor : {c.advisor_id}
                     </div>
                     <button
                       style={btnSmall}
