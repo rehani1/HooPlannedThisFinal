@@ -6,6 +6,7 @@ import Sidebar from "../components/sidebar";
 
 export default function Home() {
   const [photoUrl, setPhotoUrl] = useState("/cav_man.png");
+  const [firstName, setFirstName] = useState(null);
 
   useEffect(() => {
     const loadAvatar = async () => {
@@ -14,15 +15,17 @@ export default function Home() {
 
       const { data: row, error } = await supabase
         .from("users")
-        .select("profile_picture")
+        .select("profile_picture, first_name")
         .eq("id", user.id)
         .maybeSingle();
 
       if (!error && row) {
         setPhotoUrl(getProfilePhotoFromRow(row));
+        setFirstName(row.first_name || user.user_metadata?.first_name || null);
       } else {
         setPhotoUrl("/cav_man.png");
       }
+
     };
 
     loadAvatar();
@@ -35,7 +38,7 @@ export default function Home() {
       {/* Main content */}
       <main style={{ flex: 1, padding: "48px", position: "relative" }}>
         <h1 style={{ fontSize: "36px", fontWeight: "900", color: "#1e3a8a" }}>
-          Welcome to HooPlannedThis!
+          Welcome to HooPlannedThis, {firstName ?? "—"}!
         </h1>
 
         {/* Floating avatar */}
