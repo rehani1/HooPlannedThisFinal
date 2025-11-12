@@ -8,6 +8,7 @@ export default function Profile() {
   const [fullName, setFullName] = useState(null);
   const [computingId, setComputingId] = useState(null);
   const [email, setEmail] = useState(null);
+  const [phoneNumber, setPhoneNumber] = useState(null);
   const [gradYear, setGradYear] = useState(null);
   const [councilName, setCouncilName] = useState(null); // 👈 NEW
   const [role, setRole] = useState(null);
@@ -68,6 +69,7 @@ export default function Profile() {
           last_name,
           full_name,
           role,
+          phone_number,
           profile_picture,
           councils (
             grad_year,
@@ -87,6 +89,7 @@ export default function Profile() {
         setMsg(`Users select error: ${selectErr.message}`);
         setEmail(user.email);
         setComputingId(user.user_metadata?.computing_id ?? null);
+        setPhoneNumber(user.user_metadata?.phone_number ?? null);
         setFullName(buildName(null, user));
         setGradYear(user.user_metadata?.grad_year ?? null);
         setPhotoUrl("/cav-man.png");
@@ -100,6 +103,7 @@ export default function Profile() {
         setEmail(row.email ?? user.email);
         setComputingId(row.computing_id ?? user.user_metadata?.computing_id ?? null);
         setGradYear(row.grad_year ?? user.user_metadata?.grad_year ?? null);
+        setPhoneNumber(row.phone_number ?? user.user_metadata?.phone_number ?? null);
         setFullName(row.full_name?.trim() || buildName(row, user));
         setPhotoUrl(getProfilePhotoFromRow(row));
         setRole(row.role ?? user.user_metadata?.role ?? null);
@@ -122,6 +126,7 @@ export default function Profile() {
         setComputingId(user.user_metadata?.computing_id ?? null);
         setFullName(buildName(null, user));
         setGradYear(user.user_metadata?.grad_year ?? null);
+        setPhoneNumber(user.user_metadata?.phone_number ?? null);
         setPhotoUrl("/cav-man.png");
         setCouncilName(null);
         setRole(user.user_metadata?.role ?? null);
@@ -232,6 +237,9 @@ export default function Profile() {
         </div>
         <div style={cardStyle}>
           <strong>Email:</strong> {email ?? "—"}
+        </div>
+        <div style={cardStyle}>
+          <strong>Phone Number:</strong> {phoneNumber ?? "—"}
         </div>
         <div style={cardStyle}>
           <strong>Graduation Year:</strong> {gradYear ?? "—"}

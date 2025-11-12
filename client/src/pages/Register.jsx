@@ -62,6 +62,7 @@ export default function Register() {
   const [computingId, setComputingId] = React.useState("");
   const [firstName, setFirstName] = React.useState("");   // ✅ fixed name
   const [lastName, setLastName] = React.useState("");     // optional
+  const [phoneNumber, setPhoneNumber] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
   const [gradYear, setGradYear] = React.useState("");
@@ -90,6 +91,7 @@ export default function Register() {
       email,
       computingId,
       password,
+      phoneNumber,
       options: {
         // store extras in auth user_metadata
         data: { grad_year: y, first_name: firstName, last_name: lastName || null },
@@ -117,6 +119,7 @@ export default function Register() {
           id: user.id,
           email: user.email,
           computingId: user.computingId,
+          phoneNumber: user.phoneNumber,
           full_name: [firstName, lastName].filter(Boolean).join(" "),
           grad_year: y,
         },
@@ -196,6 +199,19 @@ export default function Register() {
                   onChange={(e) => setComputingId(e.target.value)}
                   required
                   autoComplete="computingId"
+                />
+              </div>
+               <label htmlFor="phoneNumber" style={styles.label}>Phone Number</label>
+              <div style={styles.inputWrapper}>
+                <input
+                  id="phoneNumber"
+                  type="text"
+                  placeholder="ex: 123-456-7890"
+                  style={styles.input}
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  required
+                  autoComplete="phoneNumber"
                 />
               </div>
 
