@@ -13,7 +13,7 @@ export default function CommitteeManager({ gradYear }) {
     const load = async () => {
       const { data, error } = await supabase
         .from("committees")
-        .select("committee_id, committee_name, commitee_budget")
+        .select("committee_id, committee_name, committee_budget")
         .eq("grad_year", gradYear)
         .order("committee_name", { ascending: true });
       if (!error) setCommittees(data || []);
@@ -30,7 +30,7 @@ export default function CommitteeManager({ gradYear }) {
     const { error } = await supabase.from("committees").insert([
       {
         committee_name: name,
-        commitee_budget: budget ? Number(budget) : null,
+        committee_budget: budget ? Number(budget) : null,
         grad_year: gradYear,
       },
     ]);
@@ -43,7 +43,7 @@ export default function CommitteeManager({ gradYear }) {
     // reload
     const { data } = await supabase
       .from("committees")
-      .select("committee_id, committee_name, commitee_budget")
+      .select("committee_id, committee_name, committee_budget")
       .eq("grad_year", gradYear)
       .order("committee_name", { ascending: true });
     setCommittees(data || []);
@@ -74,7 +74,7 @@ export default function CommitteeManager({ gradYear }) {
         {committees.map((c) => (
           <li key={c.committee_id}>
             {c.committee_name}{" "}
-            {c.commitee_budget ? `($${c.commitee_budget})` : null}
+            {c.committee_budget ? `($${c.committee_budget})` : null}
           </li>
         ))}
       </ul>

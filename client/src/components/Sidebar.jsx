@@ -66,6 +66,9 @@ export default function Sidebar() {
             <NavLink to="/class-council" style={navButton}>
               Class Council
             </NavLink>
+            <NavLink to="/my-committee" style={navButton}>
+              My Committee
+            </NavLink>
             <NavLink to="/events" style={navButton}>
               Events
             </NavLink>
