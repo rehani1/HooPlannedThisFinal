@@ -2,11 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-const ROLE_OPTIONS = [
-  "Chair",
-  "Member",
-];
-
 export default function CommitteeAssign({ committee, onClose }) {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -81,7 +76,7 @@ export default function CommitteeAssign({ committee, onClose }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h3 style={{ margin: 0 }}>
-          Assign users to {committee.committee_name}
+            {committee.committee_name} Committee!
         </h3>
         <button onClick={onClose} style={{ border: "none", background: "transparent", fontSize: 20, cursor: "pointer" }}>
           ×
@@ -110,55 +105,7 @@ export default function CommitteeAssign({ committee, onClose }) {
             )}
           </div>
 
-          <form onSubmit={handleAssign} style={{ display: "grid", gap: 8 }}>
-            <label style={{ fontSize: 13 }}>Select user to add</label>
-            <select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              style={{ padding: 6, borderRadius: 6, border: "1px solid #d1d5db" }}
-            >
-              <option value="">— pick a user —</option>
-              {unassignedUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name ||
-                    `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() ||
-                    u.email}
-                </option>
-              ))}
-            </select>
 
-            <label style={{ fontSize: 13 }}>Role in committee</label>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              style={{ padding: 6, borderRadius: 6, border: "1px solid #d1d5db" }}
-            >
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-
-            {error && (
-              <div style={{ color: "#b91c1c", fontSize: 13 }}>{error}</div>
-            )}
-
-            <button
-              type="submit"
-              style={{
-                background: "#003e83",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                padding: "8px 12px",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              Assign
-            </button>
-          </form>
         </>
       )}
     </div>

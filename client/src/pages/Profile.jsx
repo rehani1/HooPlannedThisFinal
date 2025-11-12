@@ -10,6 +10,7 @@ export default function Profile() {
   const [email, setEmail] = useState(null);
   const [gradYear, setGradYear] = useState(null);
   const [councilName, setCouncilName] = useState(null); // 👈 NEW
+  const [role, setRole] = useState(null);
   const [committeeName, setCommitteeName]  = useState(null);
   const [photoUrl, setPhotoUrl] = useState("/cav-man.png");
   const [msg, setMsg] = useState("Loading...");
@@ -66,6 +67,7 @@ export default function Profile() {
           first_name,
           last_name,
           full_name,
+          role,
           profile_picture,
           councils (
             grad_year,
@@ -90,6 +92,7 @@ export default function Profile() {
         setPhotoUrl("/cav-man.png");
         setCouncilName(null); // no council
         setCommitteeName(null);
+        setRole(user.user_metadata?.role ?? null);
         return;
       }
 
@@ -99,6 +102,7 @@ export default function Profile() {
         setGradYear(row.grad_year ?? user.user_metadata?.grad_year ?? null);
         setFullName(row.full_name?.trim() || buildName(row, user));
         setPhotoUrl(getProfilePhotoFromRow(row));
+        setRole(row.role ?? user.user_metadata?.role ?? null);
         // 👇 pull council name from join
         if (row?.councils?.class_name?.name) {
           setCouncilName(row.councils.class_name.name);
@@ -120,6 +124,7 @@ export default function Profile() {
         setGradYear(user.user_metadata?.grad_year ?? null);
         setPhotoUrl("/cav-man.png");
         setCouncilName(null);
+        setRole(user.user_metadata?.role ?? null);
         setMsg("No row in users for this id.");
       }
     };
@@ -233,6 +238,9 @@ export default function Profile() {
         </div>
         <div style={cardStyle}>
           <strong>Council:</strong> {councilName ?? "No council for this grad year"}
+        </div>
+          <div style={cardStyle}>
+          <strong>Role:</strong> {role ?? "No role assigned"}
         </div>
         <div style={cardStyle}>
           <strong>Committee:</strong> {committeeName ?? "No committee assigned"}

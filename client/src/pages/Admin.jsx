@@ -5,6 +5,8 @@ import AdvisorManager from "../components/AdvisorManager";
 import CouncilManager from "../components/CouncilManager";
 import CommitteeManager from "../components/CommitteeManager";
 import CommitteeAssign from "../components/CommitteeAssignment";
+import RoleManager from "../components/RoleManager.jsx";
+
 
 import { supabase } from "../lib/supabaseClient";
 
@@ -17,6 +19,9 @@ export default function Admin() {
   const [councilToEdit, setCouncilToEdit] = useState(null);
   const [showCommitteeAssign, setShowCommitteeAssign] = useState(false);
   const [selectedCommittee, setSelectedCommittee] = useState(null);
+  const [showRoleManager, setShowRoleManager] = useState(false);
+  const [roleGradYear, setRoleGradYear] = useState(null);
+
 
 
 
@@ -172,6 +177,16 @@ export default function Admin() {
                         <span> none</span>
                       )}
                     </div>
+                     <button
+                          style={{ ...btnSmall, marginLeft: 8 }}
+                          onClick={() => {
+                            setRoleGradYear(c.grad_year);
+                            setShowRoleManager(true);
+                          }}
+                        >
+                          Manage Roles
+                        </button>
+
 
 
                     <div style={{ fontSize: 12, color: "#4b5563" }}>
@@ -295,6 +310,22 @@ export default function Admin() {
                   setShowCommitteeAssign(false);
                   setSelectedCommittee(null);
                   loadCouncils(); // refresh
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+      {showRoleManager && roleGradYear && (
+          <div style={modalBackdrop} onClick={() => setShowRoleManager(false)}>
+            <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+              <RoleManager
+                gradYear={roleGradYear}
+                onClose={() => {
+                  setShowRoleManager(false);
+                  setRoleGradYear(null);
+                  // optional: reload to reflect updated roles in any other UI
+                  // loadCouncils();
                 }}
               />
             </div>
