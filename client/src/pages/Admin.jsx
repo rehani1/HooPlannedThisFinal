@@ -7,13 +7,50 @@ import CommitteeManager from "../components/CommitteeManager";
 import CommitteeAssign from "../components/CommitteeAssignment";
 import RoleManager from "../components/RoleManager.jsx";
 
-
 import { supabase } from "../lib/supabaseClient";
+
+const eventStatusPalette = {
+  Draft: { bg: "#e2e8f0", fg: "#0f172a" },
+  Planning: { bg: "#fff7ed", fg: "#9a3412" },
+  "Awaiting Approval": { bg: "#e0f2fe", fg: "#075985" },
+  Approved: { bg: "#dcfce7", fg: "#166534" },
+};
+
+const eventStatusOptions = Object.keys(eventStatusPalette);
+
+const eventStatusPill = (status) => {
+  const palette = eventStatusPalette[status] || eventStatusPalette.Draft;
+  return {
+    background: palette.bg,
+    color: palette.fg,
+    padding: "6px 10px",
+    borderRadius: 999,
+    fontWeight: 800,
+    fontSize: 12,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  };
+};
+
+const formatEventDateTime = (date, time) => {
+  const dt = new Date(`${date}T${time || "00:00"}`);
+  if (Number.isNaN(dt.getTime())) return `${date}${time ? ` ${time}` : ""}`;
+  const options = time
+    ? { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }
+    : { month: "short", day: "numeric", year: "numeric" };
+  return new Intl.DateTimeFormat("en-US", options).format(dt);
+};
+
+const normalizeTimeForInput = (time) => {
+  if (!time) return "";
+  return time.length > 5 ? time.slice(0, 5) : time;
+};
 
 export default function Admin() {
   const navigate = useNavigate();
   const [showAdvisorModal, setShowAdvisorModal] = useState(false);
   const [showCouncilModal, setShowCouncilModal] = useState(false);
+  const [showEventManager, setShowEventManager] = useState(false);
 
   const [showEditCouncilModal, setShowEditCouncilModal] = useState(false);
   const [councilToEdit, setCouncilToEdit] = useState(null);
@@ -21,6 +58,24 @@ export default function Admin() {
   const [selectedCommittee, setSelectedCommittee] = useState(null);
   const [showRoleManager, setShowRoleManager] = useState(false);
   const [roleGradYear, setRoleGradYear] = useState(null);
+  const [managedEvents, setManagedEvents] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editingForm, setEditingForm] = useState({
+    name: "",
+    eventDate: "",
+    eventTime: "",
+    location: "",
+    status: "Draft",
+    description: "",
+    budget: "",
+    attendees: "",
+    committeeId: "",
+    tags: "",
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState(null);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsErr, setEventsErr] = useState("");
 
 
 
@@ -32,6 +87,182 @@ export default function Admin() {
     const ok = sessionStorage.getItem("admin_unlocked") === "1";
     if (!ok) navigate("/adminlogin", { replace: true });
   }, [navigate]);
+
+  const loadEvents = async () => {
+    setEventsLoading(true);
+    setEventsErr("");
+    const { data, error } = await supabase
+      .from("events")
+      .select(
+        `
+        event_id,
+        name,
+        description,
+        event_date,
+        event_time,
+        location_name,
+        status,
+        budget,
+        expected_attendees,
+        tags,
+        committee_id,
+        committees:committee_id(committee_name)
+      `
+      )
+      .order("event_date", { ascending: false })
+      .order("event_time", { ascending: false });
+    if (error) {
+      setEventsErr(error.message || "Failed to load events.");
+      setEventsLoading(false);
+      return;
+    }
+    setManagedEvents(
+      (data || []).map((row) => ({
+        id: row.event_id,
+        name: row.name,
+        eventDate: row.event_date,
+        eventTime: row.event_time,
+        displayDate: formatEventDateTime(row.event_date, row.event_time),
+        location: row.location_name,
+        status: row.status || "Draft",
+        description: row.description || "",
+        budget: row.budget != null ? Number(row.budget) : null,
+        attendees: row.expected_attendees != null ? Number(row.expected_attendees) : null,
+        tags: row.tags || [],
+        committeeId: row.committee_id || "",
+        committeeName: row.committees?.committee_name || (row.committee_id ? `Committee #${row.committee_id}` : "Unassigned"),
+      }))
+    );
+    setEventsLoading(false);
+  };
+
+  const startEdit = (ev) => {
+    setEventsErr("");
+    setEditingId(ev.id);
+    setEditingForm({
+      name: ev.name || "",
+      eventDate: ev.eventDate || "",
+      eventTime: normalizeTimeForInput(ev.eventTime || ""),
+      location: ev.location || "",
+      status: ev.status || "Draft",
+      description: ev.description || "",
+      budget: ev.budget ?? "",
+      attendees: ev.attendees ?? "",
+      committeeId: ev.committeeId ?? "",
+      tags: ev.tags?.join(", ") || "",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingForm({
+      name: "",
+      eventDate: "",
+      eventTime: "",
+      location: "",
+      status: "Draft",
+      description: "",
+      budget: "",
+      attendees: "",
+      committeeId: "",
+      tags: "",
+    });
+    setEditSaving(false);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditingForm((f) => ({ ...f, [name]: value }));
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    if (!editingForm.name.trim() || !editingForm.eventDate || !editingForm.location.trim()) {
+      setEventsErr("Name, date, and location are required.");
+      return;
+    }
+
+    const budgetVal = editingForm.budget !== "" ? Number(editingForm.budget) : null;
+    const attendeesVal = editingForm.attendees !== "" ? Number(editingForm.attendees) : null;
+    const committeeVal = editingForm.committeeId !== "" ? Number(editingForm.committeeId) : null;
+    const tagsArray = editingForm.tags
+      ? editingForm.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+
+    setEditSaving(true);
+    setEventsErr("");
+    const payload = {
+      name: editingForm.name.trim(),
+      event_date: editingForm.eventDate,
+      event_time: editingForm.eventTime || null,
+      location_name: editingForm.location.trim(),
+      status: editingForm.status || "Draft",
+      description: editingForm.description.trim() || null,
+      budget: Number.isFinite(budgetVal) ? budgetVal : null,
+      expected_attendees: Number.isFinite(attendeesVal) ? attendeesVal : null,
+      committee_id: Number.isFinite(committeeVal) ? committeeVal : null,
+      tags: tagsArray.length ? tagsArray : null,
+    };
+
+    const { error } = await supabase.from("events").update(payload).eq("event_id", editingId);
+    if (error) {
+      setEventsErr(error.message || "Failed to update event.");
+      setEditSaving(false);
+      return;
+    }
+
+    setManagedEvents((prev) =>
+      prev.map((ev) =>
+        ev.id === editingId
+          ? {
+              ...ev,
+              name: payload.name,
+              eventDate: payload.event_date,
+              eventTime: payload.event_time,
+              displayDate: formatEventDateTime(payload.event_date, payload.event_time),
+              location: payload.location_name,
+              status: payload.status,
+              description: payload.description || "",
+              budget: payload.budget != null ? Number(payload.budget) : null,
+              attendees: payload.expected_attendees != null ? Number(payload.expected_attendees) : null,
+              committeeId: payload.committee_id || "",
+              committeeName: payload.committee_id ? `Committee #${payload.committee_id}` : "Unassigned",
+              tags: payload.tags || [],
+            }
+          : ev
+      )
+    );
+    cancelEdit();
+  };
+
+  const removeEvent = async (id) => {
+    const confirmed = window.confirm("Delete this event? This cannot be undone.");
+    if (!confirmed) return;
+    setDeleteLoadingId(id);
+    setEventsErr("");
+    const { error } = await supabase.from("events").delete().eq("event_id", id);
+    if (error) {
+      setEventsErr(error.message || "Failed to delete event.");
+      setDeleteLoadingId(null);
+      return;
+    }
+    setManagedEvents((prev) => prev.filter((ev) => ev.id !== id));
+    if (editingId === id) cancelEdit();
+    setDeleteLoadingId(null);
+  };
+
+  const updateEventStatus = async (id, status) => {
+    const prev = managedEvents;
+    setManagedEvents((p) => p.map((ev) => (ev.id === id ? { ...ev, status } : ev)));
+    const { error } = await supabase.from("events").update({ status }).eq("event_id", id);
+    if (error) {
+      setManagedEvents(prev);
+      setEventsErr(error.message || "Failed to update status.");
+    }
+  };
 
   const loadCouncils = async () => {
     setLoadingCouncils(true);
@@ -71,6 +302,7 @@ export default function Admin() {
 
   useEffect(() => {
     loadCouncils();
+    loadEvents();
   }, []);
 
   const lock = () => {
@@ -97,6 +329,15 @@ export default function Admin() {
             </button>
             <button style={btnPrimary} onClick={() => setShowCouncilModal(true)}>
               Manage Councils
+            </button>
+            <button
+              style={btnPrimary}
+              onClick={() => {
+                setShowEventManager(true);
+                loadEvents();
+              }}
+            >
+              Manage Events
             </button>
           </div>
         </div>
@@ -274,6 +515,197 @@ export default function Admin() {
         </div>
       )}
 
+      {/* Event manager modal */}
+      {showEventManager && (
+        <div style={modalBackdrop} onClick={() => setShowEventManager(false)}>
+          <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={modalHeader}>
+              <h2 style={{ margin: 0 }}>Manage Events</h2>
+              <button style={modalCloseBtn} onClick={() => setShowEventManager(false)}>
+                ✕
+              </button>
+            </div>
+            <p style={{ margin: "0 0 4px", color: "#4b5563" }}>
+              Adjust statuses for recent events from the database.
+            </p>
+            <div style={eventListWrap}>
+              {eventsLoading ? (
+                <div style={{ color: "#4b5563" }}>Loading events…</div>
+              ) : eventsErr ? (
+                <div style={{ color: "#b91c1c" }}>Error: {eventsErr}</div>
+              ) : managedEvents.length === 0 ? (
+                <div style={{ color: "#4b5563" }}>No events found.</div>
+              ) : (
+                managedEvents.map((ev) => (
+                  <div key={ev.id} style={eventRow}>
+                    {editingId === ev.id ? (
+                      <>
+                        <div style={eventEditForm}>
+                          <input
+                            name="name"
+                            value={editingForm.name}
+                            onChange={handleEditChange}
+                            style={eventInput}
+                            placeholder="Event name"
+                          />
+                          <div style={eventTwoCol}>
+                            <input
+                              type="date"
+                              name="eventDate"
+                              value={editingForm.eventDate}
+                              onChange={handleEditChange}
+                              style={eventInput}
+                            />
+                            <input
+                              type="time"
+                              name="eventTime"
+                              value={editingForm.eventTime}
+                              onChange={handleEditChange}
+                              style={eventInput}
+                            />
+                          </div>
+                          <input
+                            name="location"
+                            value={editingForm.location}
+                            onChange={handleEditChange}
+                            style={eventInput}
+                            placeholder="Location"
+                          />
+                          <textarea
+                            name="description"
+                            value={editingForm.description}
+                            onChange={handleEditChange}
+                            style={eventTextarea}
+                            rows={3}
+                            placeholder="Description"
+                          />
+                          <div style={eventTwoCol}>
+                            <input
+                              type="number"
+                              min="0"
+                              name="attendees"
+                              value={editingForm.attendees}
+                              onChange={handleEditChange}
+                              style={eventInput}
+                              placeholder="Expected attendees"
+                            />
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              name="budget"
+                              value={editingForm.budget}
+                              onChange={handleEditChange}
+                              style={eventInput}
+                              placeholder="Budget"
+                            />
+                          </div>
+                          <div style={eventTwoCol}>
+                            <input
+                              name="committeeId"
+                              value={editingForm.committeeId}
+                              onChange={handleEditChange}
+                              style={eventInput}
+                              placeholder="Committee ID"
+                            />
+                            <input
+                              name="tags"
+                              value={editingForm.tags}
+                              onChange={handleEditChange}
+                              style={eventInput}
+                              placeholder="Tags (comma separated)"
+                            />
+                          </div>
+                        </div>
+                        <div style={eventActions}>
+                          <select
+                            name="status"
+                            value={editingForm.status}
+                            onChange={handleEditChange}
+                            style={statusSelect}
+                          >
+                            {eventStatusOptions.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <button style={btnPrimarySmall} onClick={saveEdit} disabled={editSaving}>
+                              {editSaving ? "Saving…" : "Save"}
+                            </button>
+                            <button style={btnSecondarySmall} onClick={cancelEdit} disabled={editSaving}>
+                              Cancel
+                            </button>
+                            <button
+                              style={btnDangerSmall}
+                              onClick={() => removeEvent(ev.id)}
+                              disabled={deleteLoadingId === ev.id || editSaving}
+                            >
+                              {deleteLoadingId === ev.id ? "Deleting…" : "Delete"}
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#003e83" }}>{ev.name}</div>
+                          <div style={eventMeta}>
+                            {ev.displayDate} · {ev.location}
+                          </div>
+                          <div style={{ color: "#4b5563", fontSize: 13, marginTop: 4 }}>
+                            {ev.description || "No description"}
+                          </div>
+                          <div style={eventMeta}>
+                            {ev.attendees != null ? `${ev.attendees} attendees · ` : ""}
+                            {ev.budget != null ? `Budget $${ev.budget}` : ""}
+                          </div>
+                          <div style={eventMeta}>Committee: {ev.committeeName || "Unassigned"}</div>
+                          {ev.tags && ev.tags.length > 0 ? (
+                            <div style={adminTagRow}>
+                              {ev.tags.map((t) => (
+                                <span key={t} style={adminTag}>
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div style={eventActions}>
+                          <span style={eventStatusPill(ev.status)}>{ev.status}</span>
+                          <select
+                            value={ev.status}
+                            onChange={(e) => updateEventStatus(ev.id, e.target.value)}
+                            style={statusSelect}
+                          >
+                            {eventStatusOptions.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          <button style={btnSecondarySmall} onClick={() => startEdit(ev)}>
+                            Edit
+                          </button>
+                          <button
+                            style={btnDangerSmall}
+                            onClick={() => removeEvent(ev.id)}
+                            disabled={deleteLoadingId === ev.id}
+                          >
+                            {deleteLoadingId === ev.id ? "Deleting…" : "Delete"}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Council edit modal */}
       {showEditCouncilModal && councilToEdit && (
         <div style={modalBackdrop} onClick={() => setShowEditCouncilModal(false)}>
@@ -438,4 +870,102 @@ const modalCloseBtn = {
   fontSize: 20,
   cursor: "pointer",
   lineHeight: 1,
+};
+
+const eventListWrap = {
+  display: "grid",
+  gap: 10,
+  marginTop: 4,
+};
+
+const eventRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  border: "1px solid #eef1f4",
+  borderRadius: 10,
+  padding: "10px 12px",
+  gap: 12,
+  flexWrap: "wrap",
+};
+
+const eventMeta = { color: "#4b5563", fontSize: 13, marginTop: 2 };
+
+const statusSelect = {
+  border: "1px solid #d7dce2",
+  borderRadius: 8,
+  padding: "6px 10px",
+  fontWeight: 600,
+  color: "#003e83",
+  background: "#fff",
+};
+
+const eventEditForm = {
+  display: "grid",
+  gap: 8,
+  flex: 1,
+  minWidth: 240,
+};
+
+const eventTwoCol = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gap: 8,
+};
+
+const eventInput = {
+  border: "1px solid #d7dce2",
+  borderRadius: 8,
+  padding: "8px 10px",
+  fontSize: 14,
+  color: "#0f172a",
+};
+
+const eventTextarea = {
+  ...eventInput,
+  minHeight: 72,
+  resize: "vertical",
+};
+
+const eventActions = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  justifyContent: "flex-end",
+  flexWrap: "wrap",
+};
+
+const btnPrimarySmall = {
+  ...btnPrimary,
+  padding: "8px 10px",
+  fontSize: 13,
+};
+
+const btnSecondarySmall = {
+  ...btnSecondary,
+  padding: "8px 10px",
+  fontSize: 13,
+  borderRadius: 8,
+  borderColor: "#d7dce2",
+};
+
+const btnDangerSmall = {
+  background: "#dc2626",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  padding: "8px 10px",
+  fontWeight: 700,
+  fontSize: 13,
+  cursor: "pointer",
+};
+
+const adminTagRow = { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 };
+const adminTag = {
+  background: "#e2e8f0",
+  color: "#0f172a",
+  padding: "4px 8px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 700,
 };
