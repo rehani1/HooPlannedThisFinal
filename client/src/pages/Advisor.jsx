@@ -46,7 +46,6 @@ export default function Advisor() {
               Guidance and support from our council advisors.
             </p>
           </div>
-          <Link to="/home" style={homeBtn}>← Back to Home</Link>
         </header>
 
         {loading ? (
