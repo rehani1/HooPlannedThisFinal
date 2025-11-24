@@ -6,12 +6,13 @@ export default function Sidebar() {
   return (
     <aside
       style={{
-        width: "240px",
-        backgroundColor: "#0e2a47",
+        width: "260px",
+        background: "linear-gradient(180deg, #0e2a47 0%, #0b1c3f 100%)",
         color: "white",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
+        boxShadow: "4px 0 18px rgba(0,0,0,0.18)",
       }}
     >
       <div>
@@ -44,13 +45,15 @@ export default function Sidebar() {
           <div
             style={{
               padding: "0 24px",
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "12px",
-            }}
-          >
-            Navigation
-          </div>
+            fontSize: "18px",
+            fontWeight: "bold",
+            marginBottom: "12px",
+            color: "rgba(255,255,255,0.8)",
+            letterSpacing: 0.3,
+          }}
+        >
+          Navigation
+        </div>
 
           <nav
             style={{
@@ -80,13 +83,20 @@ export default function Sidebar() {
       </div>
 
       {/* Settings */}
-      <div style={{ padding: "16px" }}>
+      <div
+        style={{
+          padding: "16px",
+          borderTop: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(255,255,255,0.02)",
+        }}
+      >
         <div
           style={{
             fontWeight: "bold",
             marginBottom: "8px",
             opacity: 0.9,
             fontSize: "18px",
+            color: "rgba(255,255,255,0.8)",
           }}
         >
           Settings
@@ -107,10 +117,15 @@ const navButton = ({ isActive }) => ({
   color: "white",
   border: "none",
   textAlign: "left",
-  padding: "10px 16px",
-  borderRadius: "8px",
+  padding: "10px 14px",
+  borderRadius: "10px",
   fontSize: "16px",
   cursor: "pointer",
   textDecoration: "none",
-  transition: "background 0.2s",
+  transition: "background 0.2s, transform 0.1s",
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  whiteSpace: "nowrap",
+  transform: isActive ? "translateX(2px)" : "translateX(0)",
 });
